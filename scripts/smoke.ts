@@ -18,6 +18,7 @@ import { LADDERS, rungDefs } from '../src/lib/ladders';
 import { candidateInputs } from '../src/lib/trace/counterexample';
 import { checkUserCode } from '../src/lib/usercode/check';
 import { runUserIn } from '../src/lib/usercode/dispatch';
+import { parse } from '../src/lib/interp/parser';
 
 let failures = 0;
 // Across the catalogue, how load-bearing are the invariants?
@@ -92,6 +93,22 @@ for (const def of ALGORITHMS) {
     console.log(
       `  claims catch ${invariantCatches.length}/${def.variants.length} of its own variants` +
         `${invariantCatches.length ? ` (${invariantCatches.join(', ')})` : ''}`,
+    );
+  }
+
+  // 4c. The listing on the page has to be something a reader can actually
+  //     start from. They are invited to write in the same lane the code is
+  //     displayed in, and the obvious first move is to copy what is on screen
+  //     — so if the interpreter refuses it, the site has handed them a wall
+  //     built out of its own example. Parsing is the bar here, not running:
+  //     some listings name a constant the lane leaves to the reader.
+  for (const l of LANGS) {
+    const parsed = parse(def.code[l]);
+    ok(
+      parsed.ok,
+      `the ${l} listing on the page parses in the lane that offers it${
+        parsed.ok ? '' : ` — ${parsed.message} (line ${parsed.line})`
+      }`,
     );
   }
 

@@ -66,7 +66,10 @@ export function lex(src: string): Tok[] {
     }
 
     // `#include`, `#define` — the reader pasted a real file; skip the line.
-    if (c === '#' && i === lineStart) {
+    // Leading whitespace is allowed: a directive indented inside a pasted
+    // block is still a directive, and refusing it would be a lexer being
+    // fussy about something that has no meaning here either way.
+    if (c === '#' && src.slice(lineStart, i).trim() === '') {
       while (i < src.length && src[i] !== '\n') i++;
       continue;
     }

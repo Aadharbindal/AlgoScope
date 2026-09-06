@@ -77,7 +77,23 @@ export interface MapVal {
   m: Map<string, Val>;
 }
 
-export type Val = number | boolean | string | ArrVal | ObjVal | MapVal | null;
+/**
+ * A pointer to somewhere a value is kept.
+ *
+ * Only what C actually needs here: `&x` makes one, `*p` reads or writes
+ * through it. It holds the storage itself rather than an address, because
+ * there are no addresses to hold — and arithmetic on one is refused, since
+ * `p + 1` in C means the next element of an array this interpreter has no
+ * layout for, and a made-up answer there would be worse than none.
+ */
+export interface PtrVal {
+  __ptr: true;
+  to: LValue;
+  /** For the variables panel: what it points at, named. */
+  label: string;
+}
+
+export type Val = number | boolean | string | ArrVal | ObjVal | MapVal | PtrVal | null;
 
 export const isArr = (v: Val): v is ArrVal =>
   typeof v === 'object' && v !== null && (v as ArrVal).__arr === true;
@@ -87,6 +103,9 @@ export const isObj = (v: Val): v is ObjVal =>
 
 export const isMap = (v: Val): v is MapVal =>
   typeof v === 'object' && v !== null && (v as MapVal).__map === true;
+
+export const isPtr = (v: Val): v is PtrVal =>
+  typeof v === 'object' && v !== null && (v as PtrVal).__ptr === true;
 
 export const arr = (v: Val[]): ArrVal => ({ __arr: true, v });
 
@@ -115,6 +134,25 @@ export const keyOf = (v: Val): string => (v === null ? 'null' : String(stringify
 
 const INT_MIN = -2147483648;
 const INT_MAX = 2147483647;
+
+/**
+ * Named limits, under the spellings each language uses.
+ *
+ * Not a convenience: a shortest-path or minimum-finding algorithm needs a
+ * sentinel before it has anything to compare against, and every textbook
+ * reaches for one of these names. Refusing them meant the reader had to
+ * invent a magic number and then wonder whether it was large enough.
+ *
+ * They are the genuine 32-bit bounds, which matters — `INT_MAX + 1` wraps
+ * negative here just as it does in C++, and that is a bug worth being able
+ * to make.
+ */
+const CONSTANTS: Record<string, Val> = {
+  INT_MAX,
+  INT_MIN,
+  'Integer.MAX_VALUE': INT_MAX,
+  'Integer.MIN_VALUE': INT_MIN,
+};
 
 const isInt = (v: Val): v is number => typeof v === 'number' && Number.isInteger(v);
 
@@ -152,6 +190,16 @@ class Scope {
     }
     return null;
   }
+}
+
+/** Whether two lvalues name the same storage, for the aliasing check. */
+function sameSlot(a: LValue, b: LValue): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === 'var' && b.kind === 'var') return a.scope === b.scope && a.name === b.name;
+  if (a.kind === 'slot' && b.kind === 'slot') return a.target === b.target && a.index === b.index;
+  if (a.kind === 'field' && b.kind === 'field') return a.target === b.target && a.name === b.name;
+  if (a.kind === 'entry' && b.kind === 'entry') return a.target === b.target && a.key === b.key;
+  return false;
 }
 
 /** Somewhere a value can be stored: a variable, or a slot in an array. */
@@ -359,13 +407,19 @@ export class Interpreter {
         }
       }
 
+      case 'destructure': {
+        this.tick(s.line);
+        this.bind(s.names, this.eval(s.value), s.line);
+        return;
+      }
+
       case 'forEach': {
         const src = this.array(this.eval(s.iterable), s.line);
         this.push();
         try {
           for (const item of [...src.v]) {
             this.tick(s.line);
-            this.scope.vars.set(s.name, item);
+            this.bind(s.names, item, s.line);
             try {
               this.exec(s.body);
             } catch (e) {
@@ -409,7 +463,14 @@ export class Interpreter {
 
       case 'name': {
         const s = this.scope.lookup(e.name);
-        if (!s) throw new RuntimeError(`"${e.name}" is not defined here`, e.line);
+        if (!s) {
+          // The named limits, which half the algorithms that need a sentinel
+          // reach for first. They are the real 32-bit values, so `INT_MAX + 1`
+          // wraps here exactly as it does in C++ rather than sailing past.
+          const constant = CONSTANTS[e.name];
+          if (constant !== undefined) return constant;
+          throw new RuntimeError(`"${e.name}" is not defined here`, e.line);
+        }
         return s.vars.get(e.name)!;
       }
 
@@ -480,6 +541,11 @@ export class Interpreter {
         return this.call(e);
 
       case 'unary': {
+        if (e.op === 'addr') {
+          const to = this.lvalue(e.arg);
+          return { __ptr: true, to, label: describeLValue(to) };
+        }
+        if (e.op === 'deref') return this.load(this.pointer(this.eval(e.arg), e.line));
         if (e.op.startsWith('cast:')) {
           const v = this.eval(e.arg);
           const to = e.op.slice(5);
@@ -621,6 +687,9 @@ export class Interpreter {
         e.line,
       );
     }
+    if (e.k === 'unary' && e.op === 'deref') {
+      return this.pointer(this.eval(e.arg), e.line);
+    }
     if (e.k === 'index') {
       const container = this.eval(e.target);
       // `m[k]` on a map both reads and creates, which is exactly what C++ does
@@ -671,6 +740,41 @@ export class Interpreter {
     else lv.target.m.set(lv.key, v);
   }
 
+  /**
+   * Bind one name to a value, or several to the parts of a pair.
+   *
+   * A pair here is a two-element container, which is what `{r, c}` and
+   * `{node, weight}` build. Binding a different number of names than the
+   * value holds is refused rather than filled with nulls: the reader has
+   * written down a shape, and being wrong about it should say so.
+   */
+  private bind(names: string[], value: Val, line: number) {
+    if (names.length === 1) {
+      this.scope.vars.set(names[0], value);
+      return;
+    }
+    const parts = this.array(value, line);
+    if (parts.v.length !== names.length) {
+      throw new RuntimeError(
+        `${names.length} names were given for a value holding ${parts.v.length}.`,
+        line,
+      );
+    }
+    names.forEach((n, i) => this.scope.vars.set(n, parts.v[i]));
+  }
+
+  /** The storage a pointer names, or a refusal saying what it actually was. */
+  private pointer(v: Val, line: number): LValue {
+    if (isPtr(v)) return v.to;
+    if (v === null) {
+      throw new RuntimeError(
+        'Followed a null pointer. Check the guard on the line above.',
+        line,
+      );
+    }
+    throw new RuntimeError(`Only a pointer can be followed with *, and this is ${describe(v)}`, line);
+  }
+
   /* -------------------------------- strings ------------------------------ */
 
   /**
@@ -698,11 +802,25 @@ export class Interpreter {
 
   /** A field on a struct, or a container's length. */
   private member(targetExpr: Expr, name: string, line: number): Val {
+    // `Integer.MAX_VALUE` is a member of a name that is not a variable and
+    // never will be, so it is resolved before anything tries to evaluate it.
+    if (targetExpr.k === 'name' && !this.scope.lookup(targetExpr.name)) {
+      const constant = CONSTANTS[`${targetExpr.name}.${name}`];
+      if (constant !== undefined) return constant;
+    }
+
     // `Math.abs` / `Arrays.fill` reach here as a member of a bare name that is
     // not a variable; those are handled at the call site.
     const target = this.eval(targetExpr);
     if (isArr(target)) {
       if (name === 'length' || name === 'size') return target.v.length;
+      // A pair is a two-element container here, so `.first` and `.second` are
+      // its two elements. Offered only at that length: asking for `.second` of
+      // a six-element vector is a mistake, and answering it would hide one.
+      if ((name === 'first' || name === 'second') && target.v.length === 2) {
+        this.opts.observer.read();
+        return target.v[name === 'first' ? 0 : 1];
+      }
       throw new RuntimeError(`Arrays have no member "${name}" here`, line);
     }
     if (isObj(target)) {
@@ -759,7 +877,7 @@ export class Interpreter {
           e.line,
         );
       }
-      return this.invoke(fn, e.args.map((a) => this.eval(a)), e.line);
+      return this.invoke(fn, e.args.map((a) => this.eval(a)), e.line, this.refBindings(fn, e));
     }
 
     if (callee.k === 'member') {
@@ -774,7 +892,58 @@ export class Interpreter {
     throw new RuntimeError('This is not something you can call', e.line);
   }
 
-  private invoke(fn: FuncDecl, args: Val[], line: number): Val {
+  /**
+   * Where a scalar reference parameter has to write back to.
+   *
+   * `void bump(int& x)` means the caller's variable, not a copy of it. Arrays,
+   * objects and maps are already references here, so this is only about the
+   * scalars — and until it existed, `int&` parsed, ran, and silently threw the
+   * callee's writes away. A wrong answer with no error is the worst thing this
+   * interpreter can do, so it is worth the care.
+   *
+   * Modelled as copy-in, copy-out: the argument is evaluated normally and the
+   * final value is stored back when the call returns. That is indistinguishable
+   * from a real reference except when two reference parameters are bound to the
+   * same variable, where the order of the copies back would decide the answer.
+   * That case is refused rather than resolved, because either resolution would
+   * be this interpreter inventing a rule C++ does not have.
+   */
+  private refBindings(
+    fn: FuncDecl,
+    e: Expr & { k: 'call' },
+  ): { name: string; to: LValue }[] | undefined {
+    let bindings: { name: string; to: LValue }[] | undefined;
+
+    fn.params.forEach((p, i) => {
+      if (!p.type.isRef || p.type.isArray) return;
+      const argExpr = e.args[i];
+      if (argExpr === undefined) return;
+      // Only an lvalue can be written back to; `bump(3)` would not compile in
+      // C++ either, and is left to fail on its own terms if it appears.
+      if (argExpr.k !== 'name' && argExpr.k !== 'index' && argExpr.k !== 'member') return;
+
+      const to = this.lvalue(argExpr);
+      if (isArr(this.load(to)) || isObj(this.load(to)) || isMap(this.load(to))) return;
+
+      bindings ??= [];
+      if (bindings.some((b) => sameSlot(b.to, to))) {
+        throw new RuntimeError(
+          `"${fn.name}" was given the same variable for two reference parameters. Which copy back wins would decide the answer, so this is refused rather than guessed at.`,
+          e.line,
+        );
+      }
+      bindings.push({ name: p.name, to });
+    });
+
+    return bindings;
+  }
+
+  private invoke(
+    fn: FuncDecl,
+    args: Val[],
+    line: number,
+    writeBack?: { name: string; to: LValue }[],
+  ): Val {
     const maxDepth = this.opts.maxDepth ?? 400;
     if (this.stack.length >= maxDepth) {
       throw new RuntimeError(
@@ -805,6 +974,13 @@ export class Interpreter {
       if (err instanceof ReturnSig) return err.value;
       throw err;
     } finally {
+      // A scalar reference parameter is copied back to what the caller passed.
+      // Arrays and objects need none of this — they are already references —
+      // but an `int&` is the one case where the callee's writes have to reach
+      // the caller, and until this existed they silently did not.
+      for (const back of writeBack ?? []) {
+        this.store(back.to, frame.vars.get(back.name) ?? null);
+      }
       this.stack.pop();
       this.scopes.pop();
       this.scope = saved;
@@ -1125,8 +1301,17 @@ const SET_TYPES = new Set(['unordered_set', 'set', 'HashSet', 'TreeSet', 'Set'])
 
 const NOT_A_BUILTIN = Symbol('not-a-builtin');
 
+/** What a pointer points at, for display. */
+function describeLValue(lv: LValue): string {
+  if (lv.kind === 'var') return lv.name;
+  if (lv.kind === 'slot') return `[${lv.index}]`;
+  if (lv.kind === 'field') return `.${lv.name}`;
+  return `[${lv.key}]`;
+}
+
 export function describe(v: Val): string {
   if (v === null) return 'null';
+  if (isPtr(v)) return `a pointer to ${v.label}`;
   if (isArr(v)) return 'an array';
   if (isMap(v)) return v.isSet ? 'a set' : 'a map';
   if (isObj(v)) return `a ${v.type}`;
@@ -1136,6 +1321,10 @@ export function describe(v: Val): string {
 
 export function stringify(v: Val): string {
   if (v === null) return 'null';
+  // A pointer prints as what it points at, never as an address: there are no
+  // addresses here, and inventing one would be a number the reader could
+  // reason about wrongly.
+  if (isPtr(v)) return `&${v.label}`;
   if (isArr(v)) return v.v.map(stringify).join(',');
   if (isMap(v)) {
     return v.isSet

@@ -100,6 +100,15 @@ class Parser {
     const structs: StructDecl[] = [];
     while (!this.atEof()) {
       if (this.eat(';')) continue;
+      // `using namespace std;`, `using std::vector;` — the first two lines of
+      // most pasted C++, and meaningless here because there are no namespaces
+      // to bring anything in from. Skipped rather than refused: a reader whose
+      // file will not even parse learns nothing about their algorithm.
+      if (this.at('using')) {
+        while (!this.at(';') && !this.atEof()) this.i++;
+        this.eat(';');
+        continue;
+      }
       // A `class Foo { … }` or `struct Node { … }` wrapper: read through it,
       // keeping the methods so a Java file pasted whole still works, and the
       // field names so `node->next` means something.
@@ -111,6 +120,23 @@ class Parser {
     }
     if (functions.length === 0) this.fail('No function found. Write one function for this problem.');
     return { functions, structs };
+  }
+
+  /**
+   * The names a loop or declaration binds: one, or several in brackets.
+   *
+   * `auto [v, w] : adj[u]` is how the weighted-graph listing on this site is
+   * written, so a reader copying what is on the page needs it to parse. Each
+   * name takes one element of the pair the container holds.
+   */
+  private bindingNames(): string[] {
+    if (!this.eat('[')) return [this.ident('a loop variable')];
+    const names: string[] = [];
+    do {
+      names.push(this.ident('a name to bind'));
+    } while (this.eat(','));
+    this.expect(']', 'to close the binding list');
+    return names;
   }
 
   /** `struct Node { … };` — a type, not a variable of type struct. */
@@ -129,6 +155,18 @@ class Parser {
     while (!this.at('}')) {
       if (this.atEof()) this.fail('Unclosed class or struct body');
       if (this.eat(';')) continue;
+      // A constructor: the type's own name, then `(`. Refused by name rather
+      // than skipped, and deliberately. Skipping it would leave `new Node(7)`
+      // filling the fields positionally, which is right for the usual
+      // `Node(int v) : val(v), next(nullptr) {}` and silently wrong for a
+      // constructor that computes anything — and a silently wrong answer is
+      // the one thing this interpreter must not produce.
+      if (this.at(name) && this.at('(', 1)) {
+        this.fail(
+          `"${name}" has a constructor, which is not modelled here. Remove it — "new ${name}(…)" fills the fields in the order they are declared.`,
+        );
+      }
+
       const save = this.i;
       if (this.looksLikeFunction()) {
         into.push(this.funcDecl());
@@ -334,11 +372,11 @@ class Parser {
       const save = this.i;
       if (this.isRangeFor()) {
         this.type();
-        const name = this.ident('a loop variable');
+        const names = this.bindingNames();
         this.expect(':');
         const iterable = this.expression();
         this.expect(')');
-        return { k: 'forEach', name, iterable, body: this.statement(), line };
+        return { k: 'forEach', names, iterable, body: this.statement(), line };
       }
       this.i = save;
 
@@ -401,6 +439,17 @@ class Parser {
 
   private declaration(): Stmt {
     const line = this.tok.line;
+
+    // `auto [r, c] = q.front();` — one value taken apart into names.
+    if ((this.at('auto') || this.at('var')) && this.at('[', 1)) {
+      this.i++;
+      const names = this.bindingNames();
+      this.expect('=', 'after a destructuring declaration');
+      const value = this.expression();
+      this.expect(';', 'after the declaration');
+      return { k: 'destructure', names, value, line };
+    }
+
     const type = this.type();
     const decls: Declarator[] = [];
 
@@ -545,6 +594,13 @@ class Parser {
       const op = this.toks[this.i++].text;
       return { k: 'unary', op, arg: this.unary(), line };
     }
+    // `*p` and `&x`. C's way of giving a function something to write through,
+    // and the shape the C listings on this site are written in — so a reader
+    // who copies what is on the page has to be able to run it.
+    if (this.at('*') || this.at('&')) {
+      const op = this.toks[this.i++].text;
+      return { k: 'unary', op: op === '*' ? 'deref' : 'addr', arg: this.unary(), line };
+    }
     // `(int)(a + b)` — a cast, which we honour by truncating.
     if (this.at('(') && this.toks[this.i + 1]?.kind === 'id' &&
         TYPE_WORDS.has(this.toks[this.i + 1].text) && this.at(')', 2)) {
@@ -637,6 +693,10 @@ class Parser {
       this.expect(')', 'to close the container size');
       return { k: 'newArray', size, fill, line };
     }
+
+    // `q.push({0, 0})` — a braced pair as an argument, which is how the grid
+    // listing on this site queues a cell.
+    if (this.at('{')) return this.arrayLiteral();
 
     if (t.kind === 'num') {
       this.i++;

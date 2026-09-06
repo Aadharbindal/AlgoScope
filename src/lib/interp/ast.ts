@@ -58,7 +58,8 @@ export type Stmt =
       line: number;
     }
   /** `for (int x : arr)` — the range-for, identical in C++ and Java. */
-  | { k: 'forEach'; name: string; iterable: Expr; body: Stmt; line: number }
+  | { k: 'forEach'; names: string[]; iterable: Expr; body: Stmt; line: number }
+  | { k: 'destructure'; names: string[]; value: Expr; line: number }
   | { k: 'return'; value: Expr | null; line: number }
   | { k: 'break'; line: number }
   | { k: 'continue'; line: number }

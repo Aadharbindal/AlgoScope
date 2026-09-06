@@ -123,13 +123,25 @@ Where a category has more than one implementation of one problem, that is the po
 running total and Kadane's are the same question answered three times, and the ladder page measures
 all three rather than asserting which is faster.
 
-### Invariants and postconditions
+### Three kinds of claim
 
-An invariant is a claim about **every** step. A postcondition is a claim about the **result**, and
-it is checked only at the last one. The distinction is not academic: a binary search that stops one
-round early keeps the target inside its window for the whole run — the invariant holds at every
-step — and then returns −1 for a value that was sitting there. Correctness *during* and correctness
-*at the end* are two claims, and a good many real bugs violate only the second.
+An invariant is a claim about **every step**. A postcondition is a claim about the **result**,
+checked only at the last one. A cost claim is a claim about the **work done**, checked against the
+counters where they are final.
+
+The distinctions are not academic, and each was forced by a bug the previous kind could not see. A
+binary search that stops one round early keeps the target inside its window for the whole run — the
+invariant holds at every step — and then returns −1 for a value that was sitting there. That is the
+postcondition's job.
+
+The third kind exists because five authored bugs escaped both. They all escaped the same way: the
+right answer by the wrong route. Reading one element past the end, comparing a pair already known to
+be in order, swapping an element with an equal one, skipping a copy whose elements happened to be in
+place. Nothing observable in the state is wrong, because nothing observable in the state *is* wrong.
+What is wrong is the amount of work, and only the counters hold that.
+
+`npm run smoke` asserts that **every** authored bug breaks one of the three. A new algorithm whose
+bug nothing catches fails the suite, and the fix is to write the claim that catches it.
 
 ### Mutations
 
@@ -167,6 +179,28 @@ The interpreter refuses rather than guesses, and that is most of its design:
   remembers what it was declared as. Java's `Deque.push` works on the opposite end from C++'s, so
   both names are refused on a `Deque` by name.
 - A method that does not exist is named in the error rather than ignored.
+- A struct constructor is refused *by name*. Skipping it would leave `new Node(7)` filling the
+  fields positionally, which is right for the usual `Node(int v) : val(v), next(nullptr) {}` and
+  silently wrong for a constructor that computes anything.
+
+**What the subset covers is decided by evidence, not by taste.** The list of refusals was once
+written from memory — strings, pointers, templates — and running the actual listings on this site
+through the parser said otherwise. What it found:
+
+- `int&` parsed, ran, and threw the callee's writes away. Not a refusal: a **wrong answer with no
+  error**, which is the one outcome this interpreter exists to prevent. A scalar reference now
+  reaches the caller, and two reference parameters bound to the same variable are refused rather
+  than resolved, because which copy-back wins would decide the answer.
+- Four of the C listings on this site did not parse in the C lane that offers them, all on `int* k`.
+  A reader's obvious first move is to copy what is on the screen, and it was a wall built out of the
+  site's own example. Pointers to locals now work; so do `#include`, `using namespace std;`,
+  `INT_MAX` / `Integer.MAX_VALUE`, braced pairs, and `auto [a, b]`.
+- **`npm run smoke` now parses all sixty-nine displayed listings** in the lane each is offered in, so
+  this cannot drift back.
+
+What is still refused, and why it is a choice rather than a gap: `sort(v.begin(), v.end())`, on a
+site about writing the sort yourself. What is still refused because nothing has needed it: writing
+to a string, `substr`, and templates, which parse but are not modelled.
 
 **What each parameter receives is stated, not guessed.** A lane declares its binding — an array, a
 linked list, a tree of nodes, a maze, an adjacency list, a pair of words — and the editor prints the

@@ -261,6 +261,91 @@ int f() {
   if (!r.ok) console.log(`  ${r.message}`);
 }
 
+console.log('\n=== the shapes a pasted file arrives in ===');
+{
+  // What a reader's first paste actually contains, above the algorithm.
+  const r = run(
+    `#include <bits/stdc++.h>
+using namespace std;
+
+int f() { return INT_MAX > 0 ? 1 : 0; }`,
+    'f',
+  );
+  ok(r.ok && r.value === 1, 'directives, using-declarations and INT_MAX all survive a paste');
+  const j = run(`int f() { return Integer.MAX_VALUE > 0 ? 1 : 0; }`, 'f');
+  ok(j.ok && j.value === 1, "Java's spelling of the same limit works too");
+}
+
+console.log('\n=== a reference parameter reaches the caller ===');
+{
+  // Until this worked, `int&` parsed, ran, and threw the callee's writes away
+  // — a wrong answer with no error, which is the worst thing here.
+  const r = run(
+    `void mySwap(int& a, int& b) { int t = a; a = b; b = t; }
+int f() { int x = 1, y = 9; mySwap(x, y); return x * 100 + y; }`,
+    'f',
+  );
+  ok(r.ok && r.value === 901, `a user-written swap actually swaps (got ${r.ok ? String(r.value) : r.message})`);
+
+  const byValue = run(
+    `void bump(int x) { x = x + 1; }
+int f() { int a = 1; bump(a); return a; }`,
+    'f',
+  );
+  ok(byValue.ok && byValue.value === 1, 'and a plain parameter is still a copy');
+
+  const aliased = run(
+    `void mySwap(int& a, int& b) { int t = a; a = b; b = t; }
+int f() { int x = 1; mySwap(x, x); return x; }`,
+    'f',
+  );
+  ok(!aliased.ok, 'the same variable in two reference parameters is refused, not resolved');
+}
+
+console.log('\n=== pointers to locals, which the C listings are written in ===');
+{
+  const r = run(
+    `void put(int out[], int* k, int v) { out[(*k)++] = v; }
+int f() { int out[4]; int k = 0; put(out, &k, 7); put(out, &k, 9); return out[0] * 100 + out[1] * 10 + k; }`,
+    'f',
+  );
+  ok(r.ok && r.value === 792, `the out-parameter idiom works (got ${r.ok ? String(r.value) : r.message})`);
+
+  const nul = run(`int f() { int* p = NULL; return *p; }`, 'f');
+  ok(!nul.ok, 'following a null pointer stops rather than inventing a value');
+  const notPtr = run(`int f() { int x = 3; return *x; }`, 'f');
+  ok(!notPtr.ok, 'and so does dereferencing something that is not a pointer');
+}
+
+console.log('\n=== pairs, and taking one apart ===');
+{
+  const r = run(
+    `int f() { vector<vector<int>> q; q.push_back({3, 4}); auto [a, b] = q[0]; return a * 10 + b; }`,
+    'f',
+  );
+  ok(r.ok && r.value === 34, `a braced pair can be built and destructured (got ${r.ok ? String(r.value) : r.message})`);
+
+  const wrongArity = run(
+    `int f() { vector<vector<int>> q; q.push_back({1, 2, 3}); auto [a, b] = q[0]; return a; }`,
+    'f',
+  );
+  ok(!wrongArity.ok, 'binding two names to a value holding three is refused');
+
+  const second = run(`int f() { vector<vector<int>> q; q.push_back({5, 6}); return q[0].second; }`, 'f');
+  ok(second.ok && second.value === 6, '.first and .second read a pair');
+}
+
+console.log('\n=== a constructor is refused by name, not mis-parsed ===');
+{
+  const r = run(
+    `struct Node { int val; Node* next; Node(int v) : val(v), next(nullptr) {} };
+int f() { Node* n = new Node(7); return n->val; }`,
+    'f',
+  );
+  ok(!r.ok, 'a struct constructor says what it is rather than failing as a syntax error');
+  if (!r.ok) console.log(`  ${r.message}`);
+}
+
 console.log('\n=== a map is still a map after all that ===');
 {
   const r = run(
