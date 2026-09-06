@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Wordmark } from '@/components/site/Wordmark';
 import { bySlug } from '@/lib/algorithms';
 import { buildConfusionGraph, LineInsight, MIN_SESSIONS } from '@/lib/signals/aggregate';
-import { signalStore } from '@/lib/signals/store';
+import { signalStore, StoreStatus } from '@/lib/signals/store';
 
 /**
  * The confusion graph, read back.
@@ -77,7 +77,7 @@ function Provenance({
   status,
   sessions,
 }: {
-  status: { durable: boolean; rows: number; bytes: number; where: string };
+  status: StoreStatus;
   sessions: number;
 }) {
   return (
@@ -89,7 +89,7 @@ function Provenance({
           <dd className="text-ink">{sessions.toLocaleString()}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-muted">rows on disk</dt>
+          <dt className="text-muted">sessions stored</dt>
           <dd className="text-ink">{status.rows.toLocaleString()}</dd>
         </div>
         <div className="flex justify-between gap-4">
@@ -99,17 +99,26 @@ function Provenance({
         <div className="flex justify-between gap-4">
           <dt className="text-muted">storage</dt>
           <dd className={status.durable ? 'text-accent' : 'text-danger'}>
-            {status.durable ? 'durable file' : 'this instance only'}
+            {status.durable ? status.where : 'this instance only'}
           </dd>
         </div>
       </dl>
       {!status.durable && (
         <p className="mt-3 text-[0.78rem] leading-snug text-danger">
-          Signals are not reaching a durable file, so what you see below covers only this running
+          Signals are not reaching a durable store, so what you see below covers only this running
           instance and disappears when it restarts. On a serverless host the filesystem is
-          ephemeral by design; point <span className="font-mono">ALGOSCOPE_DATA_DIR</span> at a
-          mounted volume, or replace the store behind{' '}
-          <span className="font-mono">SignalStore</span>.
+          ephemeral by design: attach a Redis database and set{' '}
+          <span className="font-mono">UPSTASH_REDIS_REST_URL</span> and{' '}
+          <span className="font-mono">UPSTASH_REDIS_REST_TOKEN</span>, or point{' '}
+          <span className="font-mono">ALGOSCOPE_DATA_DIR</span> at a mounted volume.
+        </p>
+      )}
+      {status.durable && status.capped && (
+        <p className="mt-3 text-[0.78rem] leading-snug text-muted">
+          The store is at its cap of {status.keeps.toLocaleString()} sessions, so the oldest have
+          been dropped. Everything below is the most recent {status.keeps.toLocaleString()}, not
+          the whole history &mdash; which is said here rather than left for you to infer from a
+          rate that quietly changed.
         </p>
       )}
     </div>

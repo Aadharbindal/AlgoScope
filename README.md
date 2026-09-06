@@ -53,21 +53,26 @@ Two things worth knowing before it is:
   the bill; `ALGOSCOPE_TUTOR_PER_HOUR` is the knob. Both counters live in the
   process, so several instances multiply them — `RateLimiter` in
   `src/lib/ai/limit.ts` is the seam to replace for a hard cap.
-- **Signals are not durable on serverless.** The confusion map appends to a
-  file, and a serverless filesystem does not survive the instance. The insights
-  page says so rather than implying a history it does not have. `SignalStore`
-  is the seam.
+- **Signals need a database off a real disk.** With no credentials the
+  confusion map appends to a file, which is right for a machine that owns its
+  own disk and useless on a serverless host, where the filesystem does not
+  survive the instance. Attach a Redis database and it is picked up
+  automatically — the names Upstash's and Vercel's own integrations set are
+  recognised, so there is nothing to rename. The insights page names the store
+  it is actually reading, and says when it is showing a window rather than the
+  whole history.
 
 
 ## Verifying it
 
 ```bash
-npm run verify     # all five suites below, in order — run this before trusting any output
+npm run verify     # all six suites below, in order — run this before trusting any output
 npm run smoke      # engine correctness, per algorithm and per ladder
 npm run usercheck  # the user-code lane catches deliberately broken programs
 npm run signals    # the confusion map aggregates what it was given, and refuses what it was not
 npm run interp     # the C-family interpreter: maps, structs, containers, 32-bit ints
 npm run limits     # the tutor endpoint's rationing actually rations
+npm run redis      # the durable signal store, against a server that really answers
 npm run lint
 npm run build      # add --webpack if Turbopack fails to spawn its PostCSS worker
 ```
