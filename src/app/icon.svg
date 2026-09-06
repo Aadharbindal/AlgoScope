@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="AlgoScope">
+  <rect x="1" y="1" width="30" height="30" rx="7.5" fill="#0B0F0D" stroke="#2F7D5C" stroke-width="2"/>
+  <g fill="none" stroke="#3DDC97" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.5 10.5 L14.5 16.5 L8.5 22.5"/>
+    <path d="M17.5 22.5 H24"/>
+  </g>
+</svg>

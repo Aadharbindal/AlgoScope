@@ -1,0 +1,341 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ * AlgoScope — an instrument for looking at running code.
+ *
+ * Dark-first on purpose: this is a tool that sits open beside an editor.
+ * The light palette is a full peer, not an inversion.
+ * ------------------------------------------------------------------ */
+
+:root {
+  --ground: #0b0f0d;
+  --panel: #121815;
+  --raised: #19211d;
+  --sunk: #0e1311;
+  --hairline: #1e2723;
+  --hairline-strong: #2b3630;
+  --ink: #e4ede7;
+  --ink-2: #b9c5be;
+  --muted: #78877f;
+  --faint: #4d5a54;
+
+  --accent: #3ddc97;
+  --accent-dim: #1a3b2d;
+  --accent-edge: #2a6b50;
+  --on-accent: #04120c;
+
+  --probe: #f2a93b;
+  --probe-dim: #3a2c11;
+  --probe-edge: #7a5a1c;
+
+  --eliminated: #222b27;
+  --eliminated-ink: #56635c;
+
+  --danger: #ff7d6e;
+  --danger-dim: #3a1e1a;
+  --danger-edge: #7d3830;
+
+  --info: #7fb0ff;
+  --info-dim: #17233a;
+
+  --glow-strong: rgb(61 220 151 / 0.11);
+  --glow-soft: rgb(61 220 151 / 0.05);
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --lift: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 18px 50px -24px rgb(0 0 0 / 0.9);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ground: #f2f5f1;
+    --panel: #ffffff;
+    --raised: #fbfcfa;
+    --sunk: #e9ede7;
+    --hairline: #dde4dc;
+    --hairline-strong: #c5cfc4;
+    --ink: #101613;
+    --ink-2: #2f3a34;
+    --muted: #61706a;
+    --faint: #8d9a93;
+
+    --accent: #0b7a55;
+    --accent-dim: #dbefe5;
+    --accent-edge: #8fc9b1;
+    --on-accent: #ffffff;
+
+    --probe: #9a6208;
+    --probe-dim: #fbeed6;
+    --probe-edge: #dcb877;
+
+    --eliminated: #e4e9e3;
+    --eliminated-ink: #97a29b;
+
+    --danger: #b3392c;
+    --danger-dim: #fadfdb;
+    --danger-edge: #e0a49b;
+
+    --info: #2c5ea8;
+    --info-dim: #dfe8f6;
+
+    --glow-strong: rgb(11 122 85 / 0.08);
+    --glow-soft: rgb(11 122 85 / 0.04);
+
+    --shadow: 0 1px 2px rgb(16 22 19 / 0.06), 0 8px 24px -14px rgb(16 22 19 / 0.18);
+    --lift: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 18px 50px -28px rgb(16 22 19 / 0.35);
+  }
+}
+
+:root[data-theme="light"] {
+  --ground: #f2f5f1;
+  --panel: #ffffff;
+  --raised: #fbfcfa;
+  --sunk: #e9ede7;
+  --hairline: #dde4dc;
+  --hairline-strong: #c5cfc4;
+  --ink: #101613;
+  --ink-2: #2f3a34;
+  --muted: #61706a;
+  --faint: #8d9a93;
+
+  --accent: #0b7a55;
+  --accent-dim: #dbefe5;
+  --accent-edge: #8fc9b1;
+  --on-accent: #ffffff;
+
+  --probe: #9a6208;
+  --probe-dim: #fbeed6;
+  --probe-edge: #dcb877;
+
+  --eliminated: #e4e9e3;
+  --eliminated-ink: #97a29b;
+
+  --danger: #b3392c;
+  --danger-dim: #fadfdb;
+  --danger-edge: #e0a49b;
+
+  --info: #2c5ea8;
+  --info-dim: #dfe8f6;
+
+  --glow-strong: rgb(11 122 85 / 0.08);
+  --glow-soft: rgb(11 122 85 / 0.04);
+
+  --shadow: 0 1px 2px rgb(16 22 19 / 0.06), 0 8px 24px -14px rgb(16 22 19 / 0.18);
+  --lift: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 18px 50px -28px rgb(16 22 19 / 0.35);
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-sunk: var(--sunk);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-edge: var(--accent-edge);
+  --color-on-accent: var(--on-accent);
+  --color-probe: var(--probe);
+  --color-probe-dim: var(--probe-dim);
+  --color-probe-edge: var(--probe-edge);
+  --color-eliminated: var(--eliminated);
+  --color-eliminated-ink: var(--eliminated-ink);
+  --color-danger: var(--danger);
+  --color-danger-dim: var(--danger-dim);
+  --color-danger-edge: var(--danger-edge);
+  --color-info: var(--info);
+  --color-info-dim: var(--info-dim);
+
+  --font-display: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--ground);
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    color-scheme: light;
+  }
+}
+html[data-theme="light"] {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-feature-settings: "cv05" 1;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ambient background: a faint measurement grid with a low green bloom,
+ * the way an instrument's screen looks before anything is on it.
+ * ------------------------------------------------------------------ */
+
+.bg-instrument {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-instrument::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--hairline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
+  background-size: 46px 46px;
+  opacity: 0.8;
+  -webkit-mask-image: radial-gradient(130% 100% at 50% 0%, #000 30%, transparent 85%);
+  mask-image: radial-gradient(130% 100% at 50% 0%, #000 30%, transparent 85%);
+}
+
+.bg-instrument::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(48% 42% at 4% 96%, var(--glow-strong), transparent 72%),
+    radial-gradient(60% 45% at 88% 4%, var(--glow-soft), transparent 70%);
+}
+
+/*
+ * Marginalia in the gutters beside the hero.
+ *
+ * The content column is 1180px. A rail label plus breathing room needs about
+ * 140px on each side, so below 1460px there is simply nowhere to put these —
+ * and laying them over the copy, which is what a Tailwind breakpoint did, is
+ * worse than not having them. The number comes from the layout, so it lives
+ * next to the layout rather than being spelled as `xl:`.
+ */
+.backdrop-margins {
+  display: none;
+}
+
+@media (min-width: 1460px) {
+  .backdrop-margins {
+    display: block;
+  }
+}
+
+/* Blinking caret — the page reads as a terminal without animating the copy. */
+@keyframes caret {
+  0%,
+  48% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+.caret {
+  display: inline-block;
+  width: 0.06em;
+  animation: caret 1.15s steps(1, end) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Data always lines up. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Eyebrow labels — the instrument-panel voice. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.hairline {
+  border-color: var(--hairline);
+}
+
+/* Focus is always visible; this is a keyboard-first tool. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--ink);
+}
+
+/* Scrollbars that belong to the instrument rather than the OS. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* A step change should read as a change. Kept short — slow tweens are
+   just latency wearing an educational costume. */
+@keyframes flash {
+  from {
+    background-color: var(--accent-dim);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.flash {
+  animation: flash 380ms ease-out;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
