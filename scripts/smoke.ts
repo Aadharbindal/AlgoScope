@@ -90,7 +90,7 @@ for (const def of ALGORITHMS) {
     invariantsChecked += def.variants.length;
     invariantsCaught += invariantCatches.length;
     console.log(
-      `  invariant catches ${invariantCatches.length}/${def.variants.length} of its own variants` +
+      `  claims catch ${invariantCatches.length}/${def.variants.length} of its own variants` +
         `${invariantCatches.length ? ` (${invariantCatches.join(', ')})` : ''}`,
     );
   }
@@ -207,11 +207,20 @@ for (const def of ALGORITHMS) {
   );
 }
 
-console.log('\n=== how load-bearing are the invariants ===');
-console.log(`  ${invariantsCaught} of ${invariantsChecked} authored bugs are caught by an invariant`);
+console.log('\n=== how load-bearing are the claims ===');
+console.log(`  ${invariantsCaught} of ${invariantsChecked} authored bugs break a claim`);
+// Every one of them, and the bar is set there deliberately. It stood at 42 of
+// 47 until there were three kinds of claim: an invariant judges every step, a
+// postcondition judges the result, and a cost claim judges the work done. The
+// five that escaped all escaped the same way — right answer, wrong route — and
+// each needed the third kind rather than a weaker test.
+//
+// A new algorithm whose bug nothing catches will fail here, and that is the
+// point: the fix is to write the claim that catches it, which is a question
+// worth being made to answer. Never to lower this number.
 ok(
-  invariantsCaught >= invariantsChecked * 0.5,
-  `at least half of the authored bugs break an invariant (${invariantsCaught}/${invariantsChecked})`,
+  invariantsCaught === invariantsChecked,
+  `every authored bug breaks an invariant, a postcondition or a cost claim (${invariantsCaught}/${invariantsChecked})`,
 );
 
 /* ------------------------------------------------------------------ *

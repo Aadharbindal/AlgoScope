@@ -24,6 +24,8 @@ export interface ResolvedView {
   invariant?: { text: string; why: string; holds: boolean; applicable: boolean };
   /** Present only on the last step, where there is a result to judge. */
   postcondition?: { text: string; why: string; holds: boolean };
+  /** Present only on the last step, where the counters are final. */
+  cost?: { text: string; why: string; holds: boolean };
 }
 
 /** True when the invariant is in scope at this step and actually holds. */
@@ -42,6 +44,14 @@ function checkInvariant(
  */
 export function scopeFor(step: Step, oracle: Record<string, Scalar>, primary?: string): Scope {
   const scope: Scope = { ...step.vars, ...step.derived, ...oracle };
+
+  // The work done so far, for a cost claim to be written against. Prefixed
+  // rather than merged under their plain names: an algorithm is entitled to a
+  // variable called `writes`, and a claim that silently read the counter
+  // instead would be judging something other than what it says.
+  for (const [name, value] of Object.entries(step.counters)) {
+    scope[`ops_${name}`] = value;
+  }
   for (const [id, st] of Object.entries(step.structs)) {
     if (st.kind === 'array') {
       scope[id] = st.values;
@@ -119,7 +129,12 @@ export function resolveLens(
     };
   }
 
-  return { pointers, regions, invariant, postcondition };
+  let cost: ResolvedView['cost'];
+  if (lens.cost && step.costHolds !== undefined) {
+    cost = { text: lens.cost.text, why: lens.cost.why, holds: step.costHolds };
+  }
+
+  return { pointers, regions, invariant, postcondition, cost };
 }
 
 /** Stamp each step with whether the lens invariant held there. */
@@ -140,7 +155,18 @@ export function annotateInvariant(trace: Trace, lens: Lens): Trace {
   const post = lens.postcondition;
   const last = trace.steps[trace.steps.length - 1];
   if (post && last) {
-    last.postconditionHolds = evalBool(post.check, scopeFor(last, trace.oracle, lens.primary));
+    const scope = scopeFor(last, trace.oracle, lens.primary);
+    const applies = post.when === undefined || evalBool(post.when, scope);
+    last.postconditionHolds = applies ? evalBool(post.check, scope) : undefined;
+  }
+
+  // The cost claim is about the whole run, so like the postcondition it is
+  // judged where the run is over — the counters are only final there.
+  const cost = lens.cost;
+  if (cost && last) {
+    const scope = scopeFor(last, trace.oracle, lens.primary);
+    const applies = cost.when === undefined || evalBool(cost.when, scope);
+    last.costHolds = applies ? evalBool(cost.check, scope) : undefined;
   }
 
   return trace;
@@ -182,11 +208,25 @@ export function validateLens(referenceTrace: Trace, lens: Lens): LensValidation 
   const last = referenceTrace.steps[referenceTrace.steps.length - 1];
   if (post && last) {
     const scope = scopeFor(last, referenceTrace.oracle, lens.primary);
-    if (!evalBool(post.check, scope)) {
+    const applies = post.when === undefined || evalBool(post.when, scope);
+    if (applies && !evalBool(post.check, scope)) {
       return {
         ok: false,
         failedAtStep: last.i,
         reason: `Postcondition "${post.text}" failed at the end of a known-correct run.`,
+      };
+    }
+  }
+
+  const cost = lens.cost;
+  if (cost && last) {
+    const scope = scopeFor(last, referenceTrace.oracle, lens.primary);
+    const applies = cost.when === undefined || evalBool(cost.when, scope);
+    if (applies && !evalBool(cost.check, scope)) {
+      return {
+        ok: false,
+        failedAtStep: last.i,
+        reason: `Cost claim "${cost.text}" failed at the end of a known-correct run.`,
       };
     }
   }

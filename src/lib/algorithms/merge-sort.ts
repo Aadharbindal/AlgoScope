@@ -114,6 +114,10 @@ function makeRun(opts: Opts): RunFn {
     const original = arr.slice();
     t.array('arr', arr, 'arr');
 
+    /** Cells the merges were responsible for, and cells they wrote. */
+    let covered = 0;
+    let writtenBack = 0;
+
     const tmp: number[] = [];
     t.seq('tmp', tmp, 'flow', 'tmp — the merged output being built');
     // The scratch array a merge writes into is the entire space cost. The
@@ -121,6 +125,11 @@ function makeRun(opts: Opts): RunFn {
     t.aux('tmp', () => tmp.length);
 
     const merge = (lo: number, mid: number, hi: number) => {
+      // How many cells the merges between them are responsible for, and how
+      // many they actually wrote. A merge that returns without emptying both
+      // halves leaves part of its own range untouched, and these two numbers
+      // are where that shows.
+      covered += hi - lo + 1;
       t.enter('merge', `merge(${lo}, ${mid}, ${hi})`, { lo, mid, hi });
       tmp.length = 0;
       markTmp(t, tmp);
@@ -173,6 +182,7 @@ function makeRun(opts: Opts): RunFn {
       }
 
       for (let k = 0; k < tmp.length; k++) {
+        writtenBack++;
         arr[lo + k] = tmp[k];
         t.step(28, { lo, mid, hi, i, j, k }, () => `Write ${tmp[k]} back into arr[${lo + k}].`, ev.write('arr', lo + k, tmp[k]));
       }
@@ -215,7 +225,7 @@ function makeRun(opts: Opts): RunFn {
     // A closing step, so the promise the function makes has somewhere to be
     // judged. Everything above is about one range at a time; this is the only
     // moment at which "the array is sorted" is a statement about the array.
-    t.derive({ isSorted: sortedFlag(arr), kept: permutationFlag(arr, original) });
+    t.derive({ isSorted: sortedFlag(arr), kept: permutationFlag(arr, original), covered, writtenBack });
     t.step(29, { lo: 0, hi: arr.length - 1, mid: null, i: null, j: null, k: null }, () => `Sorted: [${arr.join(', ')}]`);
     return arr.join(',');
   };
@@ -258,6 +268,11 @@ export const mergeSort: AlgorithmDef = {
       text: 'The whole array is in order, and holds exactly the values it started with.',
       check: 'isSorted === 1 && kept === 1',
       why: 'The loop invariant above is about progress: it says the part already settled is settled correctly. It is silent on whether the loop ran long enough, and a sort that stops one pass early satisfies it completely while returning an array that is not sorted. This is the claim the caller actually cares about, and it can only be judged once the function has finished.',
+    },
+    cost: {
+      text: 'Every merge writes back every cell of the range it was given — as many cells out as the range holds.',
+      check: 'writtenBack === covered',
+      why: 'Dropping the drain of one half is the rare bug that is usually harmless and occasionally fatal, and which half decides which. Leftovers from the right half are already sitting in their final positions, so skipping them sorts correctly and passes every claim above; leftovers from the left half are the largest values and get stranded. A merge that returns without emptying both halves has left part of its own range untouched either way, and that is true whether or not the answer happened to survive it. Same values, same order, fewer writes — and the writes are what a merge is.',
     },
   },
   run,

@@ -82,6 +82,8 @@ function makeRun(opts: Opts): RunFn {
     let i: number | null = null;
     let j: number | null = null;
     let minIdx: number | null = null;
+    /** Swaps that exchanged two equal values, and so changed nothing. */
+    let idleSwaps = 0;
 
     t.step(2, { n, i, j, minIdx }, `The array has ${n} element${n === 1 ? '' : 's'}.`);
 
@@ -112,6 +114,10 @@ function makeRun(opts: Opts): RunFn {
         }
       }
 
+      // A swap of two equal values leaves the array exactly as it was: real
+      // work, no effect. Counted so a cost claim can say it never happens.
+      if (minIdx !== i && arr[i] === arr[minIdx]) idleSwaps++;
+
       const needsSwap = minIdx !== i;
       t.step(12, { n, i, j, minIdx }, () => (needsSwap ? `The smallest remaining value sits at index ${minIdx}, not ${i}. It has to move.` : `The smallest remaining value is already at index ${i}. No swap needed.`));
 
@@ -132,6 +138,7 @@ function makeRun(opts: Opts): RunFn {
       minActive: null,
       isSorted: sortedFlag(arr),
       kept: permutationFlag(arr, original),
+      idleSwaps,
     });
     t.step(15, { n, i, j, minIdx }, () => `Sorted: [${arr.join(', ')}]`);
     t.exit();
@@ -177,6 +184,11 @@ export const selectionSort: AlgorithmDef = {
       text: 'The whole array is in order, and holds exactly the values it started with.',
       check: 'isSorted === 1 && kept === 1',
       why: 'The loop invariant above is about progress: it says the part already settled is settled correctly. It is silent on whether the loop ran long enough, and a sort that stops one pass early satisfies it completely while returning an array that is not sorted. This is the claim the caller actually cares about, and it can only be judged once the function has finished.',
+    },
+    cost: {
+      text: 'Every swap moves something: two equal values are never exchanged with each other.',
+      check: 'idleSwaps === 0',
+      why: 'Selection sort earns its place by promising at most one swap per pass, which matters when a write is the expensive operation. Accept ties when hunting for the minimum and it keeps every promise above — the array still sorts, and it still holds the same values — while exchanging equal elements that were already where they belonged. The result is identical, the array is identical, and the only trace of it is a swap count that should have been zero. It also costs the sort its stability, which no claim about the final array can see, because equal values are indistinguishable once they are in place.',
     },
   },
   run,

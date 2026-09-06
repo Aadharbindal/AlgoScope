@@ -127,6 +127,11 @@ export const linearSearch: AlgorithmDef = {
       check: 'found === 1',
       why: 'The same promise binary search makes, and the reason both belong on this site: the two algorithms are interchangeable to a caller precisely because they promise the same thing. They differ only in what they assume and what they cost.',
     },
+    cost: {
+      text: 'The loop looks at each element at most once — it never runs more times than the array is long.',
+      check: 'ops_iterations <= n',
+      why: 'Both claims above are about what is known and what is returned, and a loop whose bound reaches one past the end satisfies them completely: the target still is not in the part behind the cursor, and the answer still comes back right. What went wrong is that it read a cell that is not there, and the only evidence of that is the count. This is the smallest example of a whole class — work done that no one asked for, invisible in the result.',
+    },
   },
   run,
   defaultInput: { array: [7, 3, 9, 2, 8, 5], target: 8 },

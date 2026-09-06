@@ -13,6 +13,7 @@ import { MutationPalette } from '@/components/player/MutationPalette';
 import { CodeLab } from '@/components/usercode/CodeLab';
 import {
   CountersPanel,
+  ClaimsPanel,
   InvariantPanel,
   Narration,
   Panel,
@@ -486,6 +487,7 @@ function Instrument({ def }: { def: AlgorithmDef }) {
                   </div>
 
                   {view.invariant && <InvariantPanel view={view} />}
+                  <ClaimsPanel view={view} />
 
                   <div className="rounded-xl border border-hairline bg-panel p-4">
                     <Panel

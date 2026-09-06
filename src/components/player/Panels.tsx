@@ -190,3 +190,53 @@ export function InvariantPanel({ view }: { view: ResolvedView }) {
     </div>
   );
 }
+
+/* ------------------------- end-of-run claims -------------------------- */
+
+/**
+ * The two claims that can only be judged once the run is over.
+ *
+ * They appear on the last step and nowhere else, because that is the only
+ * place there is a result to check or a final count to check it against.
+ * Kept beside the invariant rather than folded into it: three different
+ * promises, and a reader who sees which one broke has learned something the
+ * word "wrong" does not carry.
+ */
+function ClaimPanel({
+  kind,
+  claim,
+}: {
+  kind: string;
+  claim: { text: string; why: string; holds: boolean };
+}) {
+  const chrome = claim.holds
+    ? 'border-accent-edge bg-accent-dim text-accent'
+    : 'border-danger-edge bg-danger-dim text-danger';
+
+  return (
+    <div className={`rounded-[7px] border p-3 ${chrome}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[0.6rem] uppercase tracking-wider opacity-80">{kind}</span>
+        <span className="font-mono text-[0.65rem] font-semibold">
+          {claim.holds ? 'holds' : 'broken'}
+        </span>
+      </div>
+      <p className="mt-1.5 text-[0.82rem] leading-snug text-ink">{claim.text}</p>
+      {!claim.holds && (
+        <p className="mt-2 border-t border-danger-edge pt-2 text-[0.75rem] leading-snug text-ink-2">
+          {claim.why}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function ClaimsPanel({ view }: { view: ResolvedView }) {
+  if (!view.postcondition && !view.cost) return null;
+  return (
+    <>
+      {view.postcondition && <ClaimPanel kind="postcondition" claim={view.postcondition} />}
+      {view.cost && <ClaimPanel kind="cost" claim={view.cost} />}
+    </>
+  );
+}

@@ -190,6 +190,11 @@ export const bubbleSort: AlgorithmDef = {
       check: 'isSorted === 1 && kept === 1',
       why: 'The loop invariant above is about progress: it says the part already settled is settled correctly. It is silent on whether the loop ran long enough, and a sort that stops one pass early satisfies it completely while returning an array that is not sorted. This is the claim the caller actually cares about, and it can only be judged once the function has finished.',
     },
+    cost: {
+      text: 'No pair of neighbours is ever compared twice, so the whole sort makes at most n(n−1)/2 comparisons.',
+      check: 'ops_comparisons <= n * (n - 1) / 2',
+      why: 'The reason the tail of each pass is skipped is that those elements are already final — comparing them again cannot change anything, and the count is the only place that shows it happened. A pass that runs one step too far still sorts, and still settles its suffix correctly, so neither claim above notices. What it does is compare a settled element with the one after it, which is work the algorithm has already proved unnecessary.',
+    },
   },
   run,
   defaultInput: { array: [5, 1, 4, 2, 8] },

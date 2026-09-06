@@ -277,6 +277,11 @@ export interface Step {
    * is the only step at which there is a result to make a claim about.
    */
   postconditionHolds?: boolean;
+  /**
+   * Whether the cost claim held. Set only on the final step, because the
+   * counters are only final there.
+   */
+  costHolds?: boolean;
 }
 
 export interface Trace {
@@ -371,6 +376,52 @@ export interface Postcondition {
   text: string;
   /** Boolean expression over the same scope the invariant sees. */
   check: string;
+  /**
+   * When the claim is meaningful at all. Absent means always.
+   *
+   * The same escape the invariant has, and needed for the same reason: some
+   * algorithms have no answer for some inputs. Kadane's and the brute-force
+   * maximum subarray read `arr[0]` before they begin, so on an empty array
+   * there is nothing they promise — and reporting a correct run as having
+   * broken its promise would be a false alarm in the one place this site
+   * cannot afford one. A guard is not a way to make a failing claim pass: it
+   * says where the claim applies, and where it applies it is checked.
+   */
+  when?: string;
+  why: string;
+}
+
+/**
+ * What the function promises about the *work* it does, as opposed to the
+ * answer it returns.
+ *
+ * The third kind of claim, and it exists because the first two provably
+ * cannot cover everything. An invariant judges the state at each step; a
+ * postcondition judges the result. A bug that returns the right answer by a
+ * wrong route satisfies both and is caught by neither — reading one element
+ * past the end of the array, comparing a pair that was already in order,
+ * swapping an element with an equal one, skipping a copy whose elements
+ * happened to be in place already. Nothing observable in the state is wrong,
+ * because nothing observable in the state *is* wrong. What is wrong is the
+ * amount of work, and that is a fact only the counters hold.
+ *
+ * Checked at the final step, where the counts are final. Written against the
+ * same scope as the other two, plus `ops_comparisons`, `ops_reads`,
+ * `ops_writes`, `ops_swaps`, `ops_iterations`, `ops_calls`, `ops_maxDepth`
+ * and `ops_auxPeak` — prefixed so a claim can never be silently shadowed by
+ * a program variable that happens to share a name.
+ *
+ * A cost claim is a claim, not a benchmark. It says what the algorithm is
+ * *allowed* to do, in terms of its own input; it never says how fast anything
+ * ran, and it is not the measured complexity, which is recovered by running
+ * the thing rather than by asserting about it.
+ */
+export interface CostClaim {
+  text: string;
+  /** Boolean expression over the same scope, plus the `ops_` counters. */
+  check: string;
+  /** When the claim is meaningful at all. Absent means always. */
+  when?: string;
   why: string;
 }
 
@@ -381,6 +432,7 @@ export interface Lens {
   regions: RegionSpec[];
   invariant?: Invariant;
   postcondition?: Postcondition;
+  cost?: CostClaim;
 }
 
 /** Algorithm-level definitions live in `lib/algorithms/types.ts`. */

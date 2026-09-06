@@ -78,6 +78,9 @@ const run: RunFn = (input, t, mut) => {
   let best = bestZero ? 0 : arr[0];
   let bestL = 0;
   let bestR = 0;
+  /** Cells the ranges cover, and cells actually added into their totals. */
+  let spanTotal = 0;
+  let termsAdded = 0;
 
   t.oracle({ answer: trueBest(arr) });
   t.enter('maxSubarraySum', `maxSubarraySum(arr)`);
@@ -94,8 +97,14 @@ const run: RunFn = (input, t, mut) => {
       let sum = 0;
       t.step(7, { n, i, j, k: null, sum, best }, 'Start the total from nothing — every element in this range is about to be added again.');
 
+      // How many cells this range holds, against how many are actually added
+      // into its total. A sum built from the wrong span shows up here even
+      // when the number it produces happens to be believable.
+      spanTotal += j - i + 1;
+
       const from = innerFromZero ? 0 : i;
       for (let k = from; k <= j; k++) {
+        termsAdded++;
         t.step(9, { n, i, j, k, sum, best }, `Add arr[${k}] = ${arr[k]}.`, ev.read('arr', k));
         sum += arr[k];
         t.step(10, { n, i, j, k, sum, best }, `The running total is now ${sum}.`, ev.cmp(cell('arr', k), '+', vr('sum'), true));
@@ -119,6 +128,8 @@ const run: RunFn = (input, t, mut) => {
   // it reported. No oracle involved — the array is right there.
   t.derive({
     bestReal: arr.slice(bestL, bestR + 1).reduce((a, b) => a + b, 0) === best ? 1 : 0,
+    spanTotal,
+    termsAdded,
   });
   t.step(17, { n, i: null, j: null, k: null, sum: null, best }, `The largest subarray sum is ${best}.`);
   return best;
@@ -165,7 +176,14 @@ export const maxSubarrayBrute: AlgorithmDef = {
     postcondition: {
       text: 'The reported best really is the sum of the subarray it claims to have found.',
       check: 'bestReal === 1',
+      when: 'n > 0',
       why: 'A self-check that needs no oracle at all: add up arr[bestL..bestR] and see whether it comes to best. Every version that computes a sum over the wrong range fails here immediately, because the range it recorded and the range it added up have come apart — while the running invariant, which only ever compares best against a bound, notices nothing.',
+    },
+    cost: {
+      text: 'Adding up a range touches exactly as many cells as the range holds.',
+      check: 'termsAdded === spanTotal',
+      when: 'n > 0',
+      why: 'The claim above catches a wrong sum by re-adding the winning range — but only when the winner is the range that was summed wrongly. Start the inner sum at zero instead of at i and every total is taken over a longer span than the one it is recorded against; on an input whose best subarray happens to begin at index 0 the two agree anyway, the answer is wrong, and nothing above notices. This claim does not depend on which range won. It says the work matches the range, for every range, and a sum built over the wrong span cannot satisfy it whatever answer it arrives at.',
     },
   },
   run,
