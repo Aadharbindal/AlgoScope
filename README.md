@@ -1,5 +1,8 @@
 # AlgoScope
 
+[![verify](https://github.com/Aadharbindal/AlgoScope/actions/workflows/verify.yml/badge.svg)](https://github.com/Aadharbindal/AlgoScope/actions/workflows/verify.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A semantic debugger for algorithms.
 
 Most algorithm visualisers animate a canned implementation. Most debuggers show you variables with no idea what they mean. AlgoScope sits in the gap: it runs an instrumented implementation, produces an execution trace, and then interprets that trace in algorithm-level terms — this is a search window, these indices are ruled out, this invariant just broke.
@@ -262,3 +265,9 @@ Several things are deliberately **not** built:
   variable view.
 - Approach ladders for the graph and DP families, which need a second implementation of each
   problem rather than any new machinery.
+
+---
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

@@ -1,0 +1,55 @@
+# The same checks the README asks you to run before trusting any output, run
+# on every push instead of on every good intention.
+#
+# The engine suites are the point. A visualiser whose invariant is wrong, or
+# whose measured complexity has drifted from the one it prints, is worse than
+# no visualiser — it is confidently wrong at a reader who came here to learn.
+# That is not something to find out later.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A push that supersedes an earlier one cancels it: the older answer is about
+# code nobody is going to look at.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # ci rather than install: the lockfile is the input, and a run that
+      # quietly resolved a different tree would be checking something else.
+      - run: npm ci
+
+      - name: Lint
+        run: npx eslint src scripts
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      # Six suites: the engine per algorithm and per ladder, the user-code lane
+      # against deliberately broken programs, the signals pipeline, the
+      # interpreter, the tutor's rate limiting, and the durable signal store.
+      - name: Verify
+        run: npm run verify
+
+      - name: Build
+        run: npm run build
