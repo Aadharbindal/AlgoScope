@@ -42,6 +42,13 @@ jobs:
       - name: Lint
         run: npx eslint src scripts
 
+      # Next generates the route types — PageProps and friends — into .next,
+      # so on a clean checkout they do not exist yet and tsc fails on files
+      # that are perfectly correct. typegen writes them without paying for a
+      # whole build, which the Build step does later anyway.
+      - name: Generate route types
+        run: npx next typegen
+
       - name: Types
         run: npx tsc --noEmit
 
