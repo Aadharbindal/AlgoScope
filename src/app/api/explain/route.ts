@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { clientKey, LIMITS, tutorLimiter } from '@/lib/ai/limit';
 import { ExplainPayload, groundedNumbers } from '@/lib/ai/payload';
 
 /**
@@ -10,11 +11,15 @@ import { ExplainPayload, groundedNumbers } from '@/lib/ai/payload';
  * nothing this route returns reaches the visualization. If this endpoint is
  * removed entirely, the product still works.
  *
- * Two guardrails:
+ * Two guardrails on what it says:
  *   1. The system prompt forbids arithmetic and invented figures.
  *   2. Every number in the reply is checked against the payload afterwards,
  *      and anything unaccounted for is reported to the reader rather than
  *      quietly shown as fact.
+ *
+ * And two on what it costs, because this is the one route on the site that
+ * spends money to answer: a bounded body, and a rate limit per caller and per
+ * instance. See `lib/ai/limit.ts` for which of those two is load-bearing.
  */
 
 const SYSTEM = `You are a tutor sitting beside a student who is stepping through a real execution trace of an algorithm.
@@ -29,10 +34,58 @@ Rules, in order of importance:
 
 Style: address the student directly as "you". Two to four sentences, no headings, no bullet points, no markdown emphasis. Explain the reasoning behind the state rather than restating the variables. Prefer the algorithm's own vocabulary — search window, invariant, pivot, frontier.`;
 
+/**
+ * The most a real payload can be.
+ *
+ * The largest one this catalogue produces — grid-bfs, whose payload carries a
+ * maze and a full code listing — is a little under 2 KB, measured rather than
+ * guessed. 32 KB leaves better than fifteen times that headroom and still
+ * bounds what can be pushed through to the model, which matters because the
+ * payload is forwarded as input tokens: capping the *question* at 500
+ * characters while leaving the body unbounded would have been a lock on the
+ * door of an open window.
+ */
+const MAX_BODY_BYTES = 32 * 1024;
+
 export async function POST(req: NextRequest) {
+  // Cheapest refusals first: nothing below this point should run for a caller
+  // who is over their limit, least of all the model call.
+  const verdict = tutorLimiter.take(clientKey(req.headers));
+  if (!verdict.ok) {
+    return NextResponse.json(
+      {
+        error:
+          verdict.scope === 'client'
+            ? `That is more than ${LIMITS.perClient} questions in ${LIMITS.clientWindowMinutes} minutes. Everything else on the page keeps working — the tutor is the only part that rations.`
+            : 'This instance has answered as many questions as it will this hour. Nothing else on the page is affected.',
+      },
+      { status: 429, headers: { 'Retry-After': String(verdict.retryAfter) } },
+    );
+  }
+
+  const declared = Number(req.headers.get('content-length') ?? '0');
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'Request is too large.' }, { status: 413 });
+  }
+
+  // A declared length can lie, so the body is measured as it is read rather
+  // than trusted from the header.
+  let body: string;
+  try {
+    body = await req.text();
+  } catch {
+    return NextResponse.json({ error: 'Malformed request.' }, { status: 400 });
+  }
+  // Measured in bytes, like the header it is checking behind — a string's
+  // length is UTF-16 units, and comparing those to a byte budget would let a
+  // body of multi-byte characters through at several times the cap.
+  if (new TextEncoder().encode(body).length > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'Request is too large.' }, { status: 413 });
+  }
+
   let payload: ExplainPayload;
   try {
-    payload = (await req.json()) as ExplainPayload;
+    payload = JSON.parse(body) as ExplainPayload;
   } catch {
     return NextResponse.json({ error: 'Malformed request.' }, { status: 400 });
   }

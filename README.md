@@ -28,14 +28,46 @@ is unaffected:
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
+## Deploying it
+
+Three features — link previews, oEmbed and the embeddable player — hand crawlers
+absolute URLs, so they do nothing at all until the site has a public origin. That
+is a switch, not a task:
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://your-domain    # required off Vercel; on Vercel the
+                                            # platform host is used when unset
+ANTHROPIC_API_KEY=...                       # optional, tutor panel only
+```
+
+With that set, `/api/og` renders a real trace step as a PNG, `/api/oembed`
+returns an iframe for it, and every algorithm page carries the matching
+`og:` tags. All three are verifiable with `curl` against a local
+`next start` before any of it is public.
+
+Two things worth knowing before it is:
+
+- **The tutor rations itself.** `/api/explain` bounds its request body and
+  limits requests per client and per instance, because it is the only route
+  that costs money to answer. The per-instance ceiling is the one that bounds
+  the bill; `ALGOSCOPE_TUTOR_PER_HOUR` is the knob. Both counters live in the
+  process, so several instances multiply them — `RateLimiter` in
+  `src/lib/ai/limit.ts` is the seam to replace for a hard cap.
+- **Signals are not durable on serverless.** The confusion map appends to a
+  file, and a serverless filesystem does not survive the instance. The insights
+  page says so rather than implying a history it does not have. `SignalStore`
+  is the seam.
+
+
 ## Verifying it
 
 ```bash
-npm run verify     # all four suites below, in order — run this before trusting any output
+npm run verify     # all five suites below, in order — run this before trusting any output
 npm run smoke      # engine correctness, per algorithm and per ladder
 npm run usercheck  # the user-code lane catches deliberately broken programs
 npm run signals    # the confusion map aggregates what it was given, and refuses what it was not
 npm run interp     # the C-family interpreter: maps, structs, containers, 32-bit ints
+npm run limits     # the tutor endpoint's rationing actually rations
 npm run lint
 npm run build      # add --webpack if Turbopack fails to spawn its PostCSS worker
 ```
