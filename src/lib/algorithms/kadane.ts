@@ -205,6 +205,7 @@ export const kadane: AlgorithmDef = {
     postcondition: {
       text: 'The reported best really is the sum of the subarray it claims to have found.',
       check: 'bestReal === 1',
+      when: 'n > 0',
       why: 'A self-check that needs no oracle at all: add up arr[bestL..bestR] and see whether it comes to best. Every version that computes a sum over the wrong range fails here immediately, because the range it recorded and the range it added up have come apart — while the running invariant, which only ever compares best against a bound, notices nothing.',
     },
     cost: {

@@ -96,6 +96,32 @@ for (const def of ALGORITHMS) {
     );
   }
 
+  // 1c. The end-of-run claims have to hold on a correct run of *every* input
+  //     the counterexample search can reach, not only the default one. The
+  //     invariant is deliberately excluded: an algorithm may be handed an
+  //     input it is not defined on — two sum's sorted precondition, broken on
+  //     purpose by an edge case that exists to show what breaking it does —
+  //     and an invariant failing there is the lesson rather than a defect.
+  //     A postcondition or a cost claim has no such excuse.
+  {
+    // Inputs the algorithm itself rejects are excluded, and only those. Two
+    // sum's `validate` says in so many words that the two-pointer argument
+    // needs a sorted array — an edge case that breaks that precondition on
+    // purpose is meant to break the promise, and is the lesson rather than a
+    // defect. Anything the algorithm accepts, it has to keep its word about.
+    const defined = candidateInputs(def).filter((c) => !def.validate?.(c.input));
+    const wrong = defined.filter((c) => {
+      const last = buildTrace(def, c.input).steps.at(-1);
+      return last?.postconditionHolds === false || last?.costHolds === false;
+    });
+    ok(
+      wrong.length === 0,
+      `end-of-run claims hold on all ${defined.length} inputs the algorithm accepts${
+        wrong.length ? ` — broken on ${wrong.slice(0, 3).map((w) => w.label).join(', ')}` : ''
+      }`,
+    );
+  }
+
   // 4c. The listing on the page has to be something a reader can actually
   //     start from. They are invited to write in the same lane the code is
   //     displayed in, and the obvious first move is to copy what is on screen

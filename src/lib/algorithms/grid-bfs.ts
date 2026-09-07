@@ -180,6 +180,9 @@ const run: RunFn = (input, t, mut) => {
   t.step(2, { rows, cols, queued: 0, seen: 0 }, `A ${rows} by ${cols} grid. The goal is the bottom-right cell.`);
 
   if (g[0][0] === 1) {
+    // This exit is as real as the others, so it publishes what the others do.
+    // A claim derived on only some paths reads as broken on the rest.
+    t.derive({ answerOk: bfsDistance(g) === -1 ? 1 : 0, queued });
     t.step(33, { rows, cols, queued: 0, seen: 0 }, 'The start itself is blocked, so nothing is reachable.', ev.fail('start is a wall'));
     t.exit();
     return -1;
