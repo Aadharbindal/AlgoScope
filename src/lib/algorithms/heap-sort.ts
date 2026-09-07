@@ -1,5 +1,5 @@
 import { cell, ev, vr } from '../trace/tracer';
-import { Scalar } from '../trace/types';
+
 import { permutationFlag, sortedFlag } from './claims';
 import { computed, conceptual } from './checkpoints';
 import { AlgorithmDef, RunFn } from './types';
