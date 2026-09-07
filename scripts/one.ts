@@ -1,5 +1,16 @@
+/**
+ * Everything smoke asks, pointed at one algorithm.
+ *
+ * The suite checks all of them, which is what you want before a commit and
+ * not what you want while writing the twentieth line of a new definition.
+ * This is the same questions against a single slug, so the loop between
+ * writing a step and finding out that a checkpoint cannot locate it is
+ * seconds rather than minutes. Nothing here is authoritative — verify is.
+ *
+ * Run: npx tsx scripts/one.ts <slug>
+ */
 import { bySlug } from '../src/lib/algorithms';
-import { buildTrace, codeFor, LANGS, resultOf } from '../src/lib/algorithms/types';
+import { buildTrace, codeFor, LANGS } from '../src/lib/algorithms/types';
 import { findCounterexample } from '../src/lib/trace/counterexample';
 import { validateLens } from '../src/lib/trace/lens';
 import { candidateInputs } from '../src/lib/trace/counterexample';

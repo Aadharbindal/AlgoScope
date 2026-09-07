@@ -6,6 +6,7 @@ import { graphBfs } from './graph-bfs';
 import { graphDfs } from './graph-dfs';
 import { topologicalSort } from './topological-sort';
 import { gridBfs } from './grid-bfs';
+import { inorderIterative } from './inorder-iterative';
 import { inorderTraversal } from './inorder-traversal';
 import { insertionSort } from './insertion-sort';
 import { kadane } from './kadane';
@@ -42,6 +43,7 @@ export const ALGORITHMS: AlgorithmDef[] = [
   maxSubarrayPrefix,
   kadane,
   inorderTraversal,
+  inorderIterative,
   levelOrder,
   gridBfs,
   graphBfs,

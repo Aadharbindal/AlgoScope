@@ -14,7 +14,8 @@
     "verify": "tsx scripts/smoke.ts && tsx scripts/usercheck.ts && tsx scripts/signals.ts && tsx scripts/interp.ts && tsx scripts/limits.ts && tsx scripts/redis.ts",
     "interp": "tsx scripts/interp.ts",
     "limits": "tsx scripts/limits.ts",
-    "redis": "tsx scripts/redis.ts"
+    "redis": "tsx scripts/redis.ts",
+    "one": "tsx scripts/one.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",
