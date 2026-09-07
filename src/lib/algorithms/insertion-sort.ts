@@ -179,6 +179,11 @@ export const insertionSort: AlgorithmDef = {
       check: 'isSorted === 1 && kept === 1',
       why: 'The loop invariant above is about progress: it says the part already settled is settled correctly. It is silent on whether the loop ran long enough, and a sort that stops one pass early satisfies it completely while returning an array that is not sorted. This is the claim the caller actually cares about, and it can only be judged once the function has finished.',
     },
+    cost: {
+      text: 'No element is compared with one it has already been compared to, so the whole sort stays within n(n+1)/2 comparisons.',
+      check: 'ops_comparisons <= n * (n + 1) / 2',
+      why: 'Insertion sort is the sort you would use on almost-sorted data, and the reason is entirely about work: each element walks back only as far as it has to, so an already-ordered array costs one comparison per element and no moves at all. Nothing about the sorted array it returns records whether that happened. A version that scans the whole prefix every time sorts perfectly and has thrown the property away.',
+    },
   },
   run,
   defaultInput: { array: [12, 11, 13, 5, 6] },

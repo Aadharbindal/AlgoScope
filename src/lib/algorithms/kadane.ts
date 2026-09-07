@@ -207,6 +207,11 @@ export const kadane: AlgorithmDef = {
       check: 'bestReal === 1',
       why: 'A self-check that needs no oracle at all: add up arr[bestL..bestR] and see whether it comes to best. Every version that computes a sum over the wrong range fails here immediately, because the range it recorded and the range it added up have come apart — while the running invariant, which only ever compares best against a bound, notices nothing.',
     },
+    cost: {
+      text: 'One pass: the loop never runs more times than the array is long.',
+      check: 'ops_iterations <= n',
+      why: 'Kadane’s whole claim is that the quadratic search collapses to a single sweep, because the best subarray ending at each index can be built from the one ending before it. That is a claim about work, not about the answer — the brute-force version on this site returns exactly the same number. If this bound breaks, what is left is a slower algorithm giving a right answer, which is the thing the reader came here to be able to tell apart.',
+    },
   },
   run,
   defaultInput: { array: [-2, 1, -3, 4, -1, 2, 1, -5, 4] },

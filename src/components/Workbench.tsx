@@ -398,7 +398,7 @@ function Instrument({ def }: { def: AlgorithmDef }) {
                     />
                   </div>
 
-                  <Narration step={current} />
+                  <Narration step={current} total={trace.steps.length} />
 
                   <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
                     <Timeline

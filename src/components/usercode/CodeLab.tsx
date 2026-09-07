@@ -236,7 +236,7 @@ export function CodeLab({ def, lane }: { def: AlgorithmDef; lane: UserLane }) {
               )}
             </div>
 
-            <Narration step={current} />
+            <Narration step={current} total={trace.steps.length} />
 
             <div className="px-4 py-3 sm:px-6">
               <Timeline steps={trace.steps} step={step} onScrub={setStep} />

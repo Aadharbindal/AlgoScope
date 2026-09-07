@@ -233,6 +233,11 @@ export const quickSort: AlgorithmDef = {
       check: 'isSorted === 1 && kept === 1',
       why: 'The loop invariant above is about progress: it says the part already settled is settled correctly. It is silent on whether the loop ran long enough, and a sort that stops one pass early satisfies it completely while returning an array that is not sorted. This is the claim the caller actually cares about, and it can only be judged once the function has finished.',
     },
+    cost: {
+      text: 'Each partition compares every element of its own range once, so the comparisons never exceed n(n-1)/2 in total.',
+      check: 'ops_comparisons <= n * (n - 1) / 2',
+      why: 'The bound is the worst case, and it is worth stating precisely because quick sort is the algorithm whose reputation rests on the case that is not the worst one. A partition that walked past the end of its range, or revisited an element it had already placed, still sorts — and quietly costs more than the algorithm is allowed to.',
+    },
   },
   run,
   defaultInput: { array: [7, 2, 9, 4, 1, 6, 3] },

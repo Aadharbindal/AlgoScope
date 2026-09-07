@@ -77,6 +77,9 @@ function makeRun(opts: Opts): RunFn {
     const n = arr.length;
     const ans: number[] = new Array(n).fill(-1);
     const st: number[] = [];
+    /** Each index is pushed once and popped at most once — the amortised bound. */
+    let pushes = 0;
+    let pops = 0;
 
     t.array('arr', arr, 'arr');
     t.array('ans', ans, 'ans');
@@ -116,11 +119,13 @@ function makeRun(opts: Opts): RunFn {
         ans[topIdx!] = opts.storeIndex ? i : arr[i];
         t.step(8, { n, i, topIdx }, () => `Index ${topIdx} is answered: ${ans[topIdx as number]}.`, ev.write('ans', topIdx as number, ans[topIdx as number]));
 
+        pops++;
         const popped = st.pop()!;
         derive(t, arr, st);
         t.step(9, { n, i, topIdx }, () => `Index ${popped} is done, so it leaves the stack. It can never need answering again.`, ev.pop('st', popped));
       }
 
+      pushes++;
       st.push(i);
       topIdx = i;
       derive(t, arr, st);
@@ -131,6 +136,8 @@ function makeRun(opts: Opts): RunFn {
     // Self-checking: for each index, is the recorded answer really a later,
     // larger value — or -1 with no such value existing?
     t.derive({
+      pushes,
+      pops,
       answersOk: ans.every((a, k) => {
         const later = arr.slice(k + 1).filter((v) => v > arr[k]);
         return a === -1 ? later.length === 0 : a === later[0];
@@ -181,6 +188,11 @@ export const nextGreaterElement: AlgorithmDef = {
       text: 'Every answer is either -1, or a value that really does appear later and really is larger.',
       check: 'answersOk === 1',
       why: 'The stack invariant says the pending indices are in decreasing order, which is true of a run that stores completely the wrong thing in the answer array. This is the claim about the answers themselves, and it is self-checking: no oracle is needed, because "is this value later and larger" can be asked of the array directly.',
+    },
+    cost: {
+      text: 'Each index is pushed once and popped at most once, so the nested loop still does linear work in total.',
+      check: 'pushes <= n && pops <= pushes',
+      why: 'The inner while loop looks quadratic and is not, and that is the whole lesson here: an index that comes off the stack never goes back on, so the total number of pops is bounded by the number of pushes however deeply any single iteration loops. It is a claim about the entire run that no single step can show, and the array of answers is identical whether or not it holds.',
     },
   },
   run,

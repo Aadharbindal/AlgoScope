@@ -173,6 +173,9 @@ const run: RunFn = (input, t, mut) => {
   const fromBack = mut.has('take-from-back');
   const noSeenCheck = mut.has('no-seen-check');
 
+  /** Cells put on the queue. A cell is queued at most once. */
+  let queued = 0;
+
   t.enter('shortestPath', `shortestPath(${rows}x${cols})`);
   t.step(2, { rows, cols, queued: 0, seen: 0 }, `A ${rows} by ${cols} grid. The goal is the bottom-right cell.`);
 
@@ -185,6 +188,7 @@ const run: RunFn = (input, t, mut) => {
   dist[0][0] = 0;
   state[0][0] = CELL_STATE.frontier;
   cells.push([0, 0]);
+  queued++;
   queue.push('0,0');
   t.step(6, { rows, cols, queued: 0, seen: 1 }, 'The start is zero steps from itself.');
   t.step(7, { rows, cols, queued: 1, seen: 1 }, 'Put the start in the queue. Everything else follows from it.', ev.push('queue', '0,0'));
@@ -259,13 +263,14 @@ const run: RunFn = (input, t, mut) => {
       t.step(28, { rows, cols, r, c, k, nr, nc, d: dist[nr][nc], queued: cells.length, seen: countSeen(dist) }, `(${nr}, ${nc}) is ${dist[nr][nc]} steps from the start — one more than (${r}, ${c}).`, ev.write('grid', nr * cols + nc, dist[nr][nc]));
 
       cells.push([nr, nc]);
+      queued++;
       queue.push(`${nr},${nc}`);
       t.step(29, { rows, cols, r, c, k, nr, nc, d: dist[nr][nc], queued: cells.length, seen: countSeen(dist) }, 'Queue it behind everything already waiting.', ev.push('queue', `${nr},${nc}`));
     }
   }
 
   cursor = null;
-  t.derive({ answerOk: answer === bfsDistance(g) ? 1 : 0 });
+  t.derive({ answerOk: answer === bfsDistance(g) ? 1 : 0, queued });
   if (answer === -1) {
     t.step(33, { rows, cols, queued: 0, seen: countSeen(dist) }, 'The queue emptied without ever reaching the goal — there is no route.', ev.fail('goal unreachable'));
   }
@@ -316,6 +321,11 @@ export const gridBfs: AlgorithmDef = {
       text: 'The distance returned is the true length of a shortest route, or -1 when there is none.',
       check: 'answerOk === 1',
       why: 'The invariant is about the order nodes leave the queue, and a search that revisits nodes can still pop them in non-decreasing order while overwriting a correct distance with a longer one. This is the claim the caller was actually given, checked against distances computed separately from the run being judged.',
+    },
+    cost: {
+      text: 'Every cell is queued at most once, so the search costs the size of the grid and not the number of routes through it.',
+      check: 'queued <= n',
+      why: 'The number of paths through an open grid grows exponentially with its size; the number of cells does not. Breadth-first search costs the second because a cell entered once is never entered again — and that is the entire reason this is tractable at all. A version that requeued cells returns the same distance on small mazes and is a different algorithm.',
     },
   },
   run,

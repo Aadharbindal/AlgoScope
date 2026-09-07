@@ -109,6 +109,8 @@ const run: RunFn = (input, t, mut) => {
   // Taking from the back is depth-first search wearing this one's clothes.
   const fromBack = mut.has('take-from-back');
   const noSeenCheck = mut.has('no-seen-check');
+  /** Nodes taken off the queue — at most one turn each is the linear bound. */
+  let dequeued = 0;
 
   t.enter('bfs', `bfs(adj, ${src})`);
   t.step(2, { n: nodes.length, u: null, v: null, queued: 0, settled: 0 }, `${nodes.length} nodes, ${edges.length} edges. Distances start unknown.`);
@@ -135,6 +137,7 @@ const run: RunFn = (input, t, mut) => {
     t.step(9, { n: nodes.length, u: null, v: null, queued: queue.length, settled: state ? Object.values(state).filter((s) => s === CELL_STATE.visited).length : 0 }, `${queue.length} node${queue.length === 1 ? '' : 's'} waiting.`, ev.cmp({ kind: 'var', name: 'queued' }, '>', { kind: 'literal', value: 0 }, true));
 
     const at = fromBack ? queue.length - 1 : 0;
+    dequeued++;
     const u = String(queue.splice(at, 1)[0]);
     cursor = u;
     state[u] = CELL_STATE.visited;
@@ -183,6 +186,7 @@ const run: RunFn = (input, t, mut) => {
   // did not produce.
   const truth = trueDistances(nodes, adj, src);
   t.derive({
+    dequeued,
     distancesOk: nodes.every((node) => (dist.get(node.id) ?? -1) === truth.get(node.id)) ? 1 : 0,
   });
   t.step(22, { n: nodes.length, u: null, v: null, queued: 0, settled }, `Distances from ${src}: ${answer}.`);
@@ -243,6 +247,11 @@ export const graphBfs: AlgorithmDef = {
       text: 'Every reachable node holds its true shortest distance, and every unreachable one holds -1.',
       check: 'distancesOk === 1',
       why: 'The invariant is about the order nodes leave the queue, and a search that revisits nodes can still pop them in non-decreasing order while overwriting a correct distance with a longer one. This is the claim the caller was actually given, checked against distances computed separately from the run being judged.',
+    },
+    cost: {
+      text: 'Each node leaves the queue at most once, so the search stays linear however many edges point at it.',
+      check: 'dequeued <= n',
+      why: 'Breadth-first search gives shortest distances because a node is settled the first time it is reached and never reconsidered. Drop the check that enforces that and a node can be queued again with a longer distance — the answer is often still right, the linear bound is gone, and on a dense graph the difference is the whole cost of the algorithm.',
     },
   },
   run,

@@ -278,6 +278,11 @@ export const cycleDetection: AlgorithmDef = {
       check: 'verdictOk === 1',
       why: 'Checked by walking the list with a set of everything seen — slow, and allowed to be, because it is the definition rather than the algorithm. That is what a postcondition is for: it may be written the obvious expensive way, being a statement of what the answer means rather than a second attempt at computing it.',
     },
+    cost: {
+      text: 'The two pointers meet, or run off the end, within one pass of the list — never more steps than there are nodes.',
+      check: 'ops_iterations <= n',
+      why: 'This is the part of Floyd’s that is genuinely surprising and easy to get wrong: because the gap between the pointers closes by exactly one node per round, they are guaranteed to meet inside a single lap. Change the speeds and the algorithm still answers correctly on plenty of inputs while quietly losing that guarantee — and a bound that no longer holds is not a bound.',
+    },
   },
   run,
   defaultInput: { array: [3, 2, 0, 4, 7], target: 1 },

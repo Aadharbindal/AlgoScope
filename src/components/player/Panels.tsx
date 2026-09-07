@@ -34,14 +34,46 @@ const fmt = (v: Scalar | undefined): string => {
 
 /* ----------------------------- narration ----------------------------- */
 
-export function Narration({ step }: { step: Step }) {
+/**
+ * The narration, and the only thing on this page that is spoken.
+ *
+ * Stepping is the whole interaction, and the narration is the sentence that
+ * changes when you step. Without a live region a reader using a screen reader
+ * presses the right arrow and hears nothing at all — the page has moved and
+ * said nothing about it. So this is the region, and it carries in words the
+ * context a sighted reader takes from the layout: which step, which line, and
+ * whether a claim about the algorithm just broke.
+ *
+ * `polite` rather than `assertive`, because stepping is the reader's own
+ * action and interrupting them mid-sentence to confirm it would be worse than
+ * waiting. `atomic`, so the whole sentence is re-read rather than only the
+ * words that changed — half a sentence is not an explanation.
+ */
+export function Narration({ step, total }: { step: Step; total?: number }) {
+  const broke = [
+    step.invariantHolds === false ? 'The invariant no longer holds.' : '',
+    step.postconditionHolds === false ? 'The postcondition does not hold.' : '',
+    step.costHolds === false ? 'The cost claim does not hold.' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className="flex min-h-[4.5rem] items-start gap-3 border-y border-hairline bg-panel px-4 py-3.5 sm:px-6">
+    <div
+      className="flex min-h-[4.5rem] items-start gap-3 border-y border-hairline bg-panel px-4 py-3.5 sm:px-6"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <span className="mt-[0.2rem] shrink-0 rounded-[7px] border border-hairline bg-sunk px-1.5 py-0.5 font-mono text-[0.6rem] text-muted tabular-nums">
-        {step.i}
+        <span aria-hidden="true">{step.i}</span>
+        <span className="sr-only">
+          Step {step.i + 1}
+          {total ? ` of ${total}` : ''}, line {step.line}.
+        </span>
       </span>
       <p key={step.i} className="rise text-[0.95rem] leading-snug text-ink sm:text-base">
         {step.narration}
+        {broke && <span className="sr-only"> {broke}</span>}
       </p>
       {step.event && (
         <span className="ml-auto mt-[0.2rem] hidden shrink-0 rounded-[7px] border border-hairline bg-sunk px-2 py-0.5 font-mono text-[0.6rem] text-muted sm:block">

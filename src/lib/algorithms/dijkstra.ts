@@ -165,6 +165,9 @@ const run: RunFn = (input, t, mut) => {
     t.derive({ exact });
   };
 
+  /** Nodes declared final. Each is settled at most once. */
+  let settled = 0;
+
   t.enter('dijkstra', `dijkstra(adj, ${nodes.length}, ${src})`);
   t.step(2, { n: nodes.length, u: null, v: null, settled: 0 }, 'Every distance starts at infinity — nothing is known yet.');
 
@@ -204,7 +207,10 @@ const run: RunFn = (input, t, mut) => {
     t.step(12, { n: nodes.length, k, u: u ?? null, v: null, settled: done.size }, stuck ? 'Nothing reachable is left. Stop.' : `${u} is the closest unsettled node, at ${show(dist.get(u!) ?? INF)}.`, ev.cmp({ kind: 'literal', value: stuck ? 'INF' : 'finite' }, '==', { kind: 'literal', value: 'INF' }, stuck));
     if (stuck) break;
 
-    if (!noSettle) done.add(u!);
+    if (!noSettle) {
+      settled++;
+      done.add(u!);
+    }
     cursor = u;
     paint();
     recheck();
@@ -227,6 +233,7 @@ const run: RunFn = (input, t, mut) => {
   cursor = null;
   // Every node, not merely the ones this run got round to settling.
   t.derive({
+    settled,
     allExact: nodes.every((node) => (dist.get(node.id) ?? INF) === (truth.get(node.id) ?? INF))
       ? 1
       : 0,
@@ -270,6 +277,11 @@ export const dijkstra: AlgorithmDef = {
       text: 'Every node holds its true shortest distance from the source.',
       check: 'allExact === 1',
       why: 'The invariant checks the nodes settled so far, so an implementation that settles nothing at all satisfies it vacuously — nothing settled, nothing wrong. This asks about every node, which is the only version of the question a caller has ever cared about.',
+    },
+    cost: {
+      text: 'A node is settled at most once: once it is declared final, no later round reopens it.',
+      check: 'settled <= n',
+      why: 'This is the greedy step and the whole argument for it — the nearest unsettled node cannot be improved later, because any other route would leave through a node that is already farther away. Weaken it and the algorithm still returns plausible distances while settling nodes repeatedly, which is both slower and, on a graph with a negative edge, wrong. The count is what turns that argument into something checkable.',
     },
   },
   run,

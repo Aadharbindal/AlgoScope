@@ -58,6 +58,8 @@ export function scopeFor(step: Step, oracle: Record<string, Scalar>, primary?: s
       scope[`${id}_n`] = st.values.length;
     } else if (st.kind === 'seq') {
       scope[`${id}_n`] = st.values.length;
+    } else if (st.kind === 'list') {
+      scope[`${id}_n`] = st.nodes.length;
     } else if (st.kind === 'tree') {
       scope[`${id}_n`] = st.nodes.length;
     } else if (st.kind === 'grid') {
@@ -73,6 +75,7 @@ export function scopeFor(step: Step, oracle: Record<string, Scalar>, primary?: s
   const p = primary ? step.structs[primary] : undefined;
   if (p) {
     if (p.kind === 'array' || p.kind === 'seq') scope.n = p.values.length;
+    else if (p.kind === 'list') scope.n = p.nodes.length;
     else if (p.kind === 'tree') scope.n = p.nodes.length;
     else if (p.kind === 'grid') scope.n = p.cells.length * (p.cells[0]?.length ?? 0);
     else if (p.kind === 'table') scope.n = p.cells.length * (p.cells[0]?.length ?? 0);

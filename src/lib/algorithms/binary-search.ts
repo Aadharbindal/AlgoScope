@@ -100,9 +100,20 @@ function makeRun(opts: Opts): RunFn {
     // returning the wrong answer, and needs its own claim.
     let previousWidth = Number.POSITIVE_INFINITY;
 
+    /**
+     * How many rounds a halving search is allowed on this array.
+     *
+     * Published rather than written into the claim, because it is a fact about
+     * the input that the claim then holds the algorithm to: a window that
+     * really does at least halve each round cannot survive more rounds than it
+     * takes to halve n down to nothing.
+     */
+    let rounds = 0;
+    const allowed = arr.length === 0 ? 0 : Math.floor(Math.log2(arr.length)) + 1;
+
     for (;;) {
       const width = (high as number) - (low as number) + 1;
-      t.derive({ shrinking: width < previousWidth ? 1 : 0 });
+      t.derive({ shrinking: width < previousWidth ? 1 : 0, rounds, allowed });
       previousWidth = width;
 
       const keepGoing = opts.strictLess ? low < high : low <= high;
@@ -118,6 +129,7 @@ function makeRun(opts: Opts): RunFn {
         ev.cmp(vr('low'), opts.strictLess ? '<' : '<=', vr('high'), keepGoing),
       );
       if (!keepGoing) break;
+      rounds++;
       t.tick();
 
       mid = low + Math.floor((high - low) / 2);
@@ -138,7 +150,7 @@ function makeRun(opts: Opts): RunFn {
 
       if (isEqual) {
         // The promise made to the caller, judged where the answer exists.
-        t.derive({ found: arr[mid as number] === target ? 1 : 0 });
+        t.derive({ found: arr[mid as number] === target ? 1 : 0, rounds, allowed });
         t.step(9, { low, high, mid, target }, () => `Found ${target} at index ${mid}. Returning that index.`, ev.found('arr', mid as number));
         t.exit();
         return mid;
@@ -178,7 +190,7 @@ function makeRun(opts: Opts): RunFn {
       }
     }
 
-    t.derive({ found: arr.indexOf(target) === -1 ? 1 : 0 });
+    t.derive({ found: arr.indexOf(target) === -1 ? 1 : 0, rounds, allowed });
     t.step(17, { low, high, mid, target }, () => `${target} is not in this array. Returning -1.`, ev.fail('search space exhausted'));
     t.exit();
     return -1;
@@ -228,6 +240,11 @@ export const binarySearch: AlgorithmDef = {
       text: 'The index returned really holds the target — or it is -1 and the target really is absent.',
       check: 'found === 1',
       why: 'The invariant above tracks the window while the search runs and says nothing about when the loop is allowed to stop. A version that ends one round early keeps the target inside the window for the entire run — the invariant is satisfied at every single step — and then returns -1 for a value that was sitting right there. Correct along the way and correct at the end are two different claims, and this is the second.',
+    },
+    cost: {
+      text: 'The window at least halves every round, so the search never takes more rounds than halving n down to nothing.',
+      check: 'rounds <= allowed',
+      why: 'This is the only reason to prefer binary search over walking the array, and it is the one thing the answer cannot show you — both return the same index. The claim is not "it was fast"; it is that every round threw away half of what was left. A version whose window shrinks by one instead of by half still finds the target, still keeps its invariant, and is linear search wearing a midpoint.',
     },
   },
   run,

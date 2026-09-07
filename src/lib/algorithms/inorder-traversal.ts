@@ -55,7 +55,11 @@ const run: RunFn = (input, t, mut) => {
 
   t.enter('inorder', `inorder(${root ? 'root' : 'null'})`);
 
+  /** Nodes entered. A traversal enters each node once — that is what it is. */
+  let entered = 0;
+
   const visit = (id: string | null, depth: number) => {
+    if (id !== null) entered++;
     t.step(
       2,
       { node: id, depth, seen: out.length },
@@ -138,6 +142,7 @@ const run: RunFn = (input, t, mut) => {
   // Sorted is not the same as complete, and a walk that skips every right
   // subtree is the first of those and not the second.
   t.derive({
+    entered,
     complete: out.length === nodes.size && new Set(out.map(String)).size === out.length ? 1 : 0,
   });
   t.step(10, { node: null, depth: 0, seen: out.length }, `Traversal complete: ${answer || 'nothing'}.`);
@@ -182,6 +187,11 @@ export const inorderTraversal: AlgorithmDef = {
       text: 'Every node in the tree appears in the output, exactly once.',
       check: 'complete === 1',
       why: 'The invariant says the output is in increasing order, and a walk that skips every right subtree satisfies it completely — what it emits really is sorted. Sorted and complete are two different promises, and this is the one that notices half the tree missing.',
+    },
+    cost: {
+      text: 'Every node is entered exactly once, so the walk costs the same whatever shape the tree is.',
+      check: 'entered === n',
+      why: 'The time an in-order walk takes does not depend on the shape of the tree — only its space does, and that is the pair of facts this algorithm exists to separate. A walk that revisited a subtree would still emit sorted values on many trees, and would have lost the only claim that makes traversal cost predictable. Insert a sorted array to watch the depth collapse into a chain while this number does not move.',
     },
   },
   run,

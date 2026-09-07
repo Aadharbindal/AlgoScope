@@ -74,6 +74,9 @@ const run: RunFn = (input, t, mut) => {
   let bestL = 0;
   let bestR = 0;
   let sum = 0;
+  /** Ranges considered, and elements added into a total to serve them. */
+  let ranges = 0;
+  let additions = 0;
 
   t.oracle({ answer: trueBest(arr) });
   t.enter('maxSubarraySum', 'maxSubarraySum(arr)');
@@ -92,6 +95,11 @@ const run: RunFn = (input, t, mut) => {
     }
 
     for (let j = i; j < n; j++) {
+      // One range considered, one element folded into the running total. The
+      // whole difference from the brute-force version is that these two stay
+      // equal instead of the second growing with the length of the range.
+      ranges++;
+      additions++;
       sum += arr[j];
       t.step(
         9,
@@ -117,6 +125,8 @@ const run: RunFn = (input, t, mut) => {
   // Add up the range it says it found, and see whether that is the number
   // it reported. No oracle involved — the array is right there.
   t.derive({
+    ranges,
+    additions,
     bestReal: arr.slice(bestL, bestR + 1).reduce((a, b) => a + b, 0) === best ? 1 : 0,
   });
   t.step(17, { n, i: null, j: null, sum: null, best }, `The largest subarray sum is ${best}.`);
@@ -163,7 +173,14 @@ export const maxSubarrayPrefix: AlgorithmDef = {
     postcondition: {
       text: 'The reported best really is the sum of the subarray it claims to have found.',
       check: 'bestReal === 1',
+      when: 'n > 0',
       why: 'A self-check that needs no oracle at all: add up arr[bestL..bestR] and see whether it comes to best. Every version that computes a sum over the wrong range fails here immediately, because the range it recorded and the range it added up have come apart — while the running invariant, which only ever compares best against a bound, notices nothing.',
+    },
+    cost: {
+      text: 'Each range costs one addition: the running total is extended by the next element, never rebuilt from the start.',
+      check: 'additions === ranges',
+      when: 'n > 0',
+      why: 'This is the entire difference between this version and the brute-force one beside it, and the two return identical answers on every input — so the count is the only place a reader can be shown what changed. The brute force adds a range up from scratch every time, paying for its whole length; this carries the total forward and pays one. Reset that total in the wrong place and it still returns the right answer, having quietly become the algorithm it was meant to improve on.',
     },
   },
   run,

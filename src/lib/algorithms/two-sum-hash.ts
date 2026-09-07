@@ -87,17 +87,24 @@ const run: RunFn = (input, t, mut) => {
     t.derive({ mapped: same ? 1 : 0 });
   };
 
+  /** One pass over the array, and one lookup inside it, per element. */
+  let passes = 0;
+  let lookups = 0;
+
   t.enter('twoSum', `twoSum(arr, ${target})`);
   t.step(2, { n, i: null, need: null, target, held: 0 }, 'The map starts empty. It will hold every value already passed, and where it was.');
   recheck(0);
   t.step(3, { n, i: null, need: null, target, held: 0 }, `${n} element${n === 1 ? '' : 's'} to walk, once.`);
 
   for (let i = 0; i < n; i++) {
+    // One pass, one lookup. Both halves of that are the claim.
+    passes++;
     t.step(4, { n, i, need: null, target, held: seen.size }, `At index ${i}, holding ${arr[i]}.`, ev.cmp(vr('i'), '<', vr('n'), true));
 
     const need = flipSign ? target + arr[i] : target - arr[i];
     t.step(5, { n, i, need, target, held: seen.size }, flipSign ? `Computed ${target} + ${arr[i]} = ${need} as the partner to look for.` : `To reach ${target}, this element needs a partner of ${need}.`, ev.read('arr', i));
 
+    lookups++;
     const found = seen.has(need);
     t.step(7, { n, i, need, target, held: seen.size }, found ? `${need} is already in the map — it was at index ${seen.get(need)}.` : `${need} has not been seen yet.`, ev.cmp(cell('arr', i), '==', vr('need'), found));
 
@@ -105,7 +112,7 @@ const run: RunFn = (input, t, mut) => {
       const answer = `${seen.get(need)},${i}`;
       const at = Number(seen.get(need));
       // Two distinct indices whose values really add up — the whole promise.
-      t.derive({ pairOk: at !== i && arr[at] + arr[i] === target ? 1 : 0 });
+      t.derive({ pairOk: at !== i && arr[at] + arr[i] === target ? 1 : 0, passes, lookups });
       t.step(8, { n, i, need, target, held: seen.size }, `Indices ${seen.get(need)} and ${i} hold ${need} and ${arr[i]}, which sum to ${target}.`, ev.found('arr', i));
       t.exit();
       return answer;
@@ -125,7 +132,7 @@ const run: RunFn = (input, t, mut) => {
   }
 
   t.exit();
-  t.derive({ pairOk: truePair(arr, target) === '-1,-1' ? 1 : 0 });
+  t.derive({ pairOk: truePair(arr, target) === '-1,-1' ? 1 : 0, passes, lookups });
   t.step(14, { n, i: null, need: null, target, held: seen.size }, 'Every element has been passed and no partner was ever waiting. There is no pair.', ev.fail('no pair sums to the target'));
   return '-1,-1';
 };
@@ -163,6 +170,11 @@ export const twoSumHash: AlgorithmDef = {
       text: 'The two indices are different, and the values at them sum to the target — or there is no such pair.',
       check: 'pairOk === 1',
       why: 'A pair of indices is only an answer if it is a pair: two distinct positions whose values add up. Stating it this way catches the whole family of near-misses at once — an index paired with itself, a partner computed with the wrong sign, a lookup keyed by the wrong thing — none of which any loop invariant about the search notices, because each of them searches perfectly well for the wrong thing.',
+    },
+    cost: {
+      text: 'One pass and one lookup per element: the array is never scanned a second time to find a partner.',
+      check: 'lookups <= n && passes <= n',
+      why: 'This is the only thing the map buys, and the sorted two-pointer version beside it returns exactly the same pair. What the map replaces is the inner loop — the partner is asked for once instead of searched for — and no property of the answer records whether that happened. A version that fell back to scanning would still find the pair and would no longer be this algorithm.',
     },
   },
   run,

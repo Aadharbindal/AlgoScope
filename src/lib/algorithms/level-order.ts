@@ -134,12 +134,15 @@ const run: RunFn = (input, t, mut) => {
     t.derive({ byLevel: emittedMax <= queuedMin ? 1 : 0 });
   };
 
+  /** Nodes taken off the queue. On a tree each node comes off exactly once. */
+  let dequeued = 0;
   let guard = 0;
   while (queue.length > 0 && guard++ < 100_000) {
     t.step(8, { queued: queue.length, done: out.length, level: null }, `${queue.length} node${queue.length === 1 ? '' : 's'} waiting. Keep going.`, ev.cmp({ kind: 'var', name: 'queued' }, '>', { kind: 'literal', value: 0 }, true));
 
     const pos = fromBack ? ids.length - 1 : out.length;
     const id = fromBack ? ids.splice(pos, 1)[0] : ids[out.length];
+    dequeued++;
     const value = fromBack ? (queue.splice(queue.length - 1, 1)[0] as number) : (queue.shift() as number);
     if (fromBack) ids.splice(out.length, 0, id);
 
@@ -178,6 +181,7 @@ const run: RunFn = (input, t, mut) => {
 
   const answer = out.join(',');
   t.derive({
+    dequeued,
     complete: out.length === nodes.size && new Set(out.map(String)).size === out.length ? 1 : 0,
   });
   t.step(21, { queued: 0, done: out.length, level: null }, `Level order: ${answer || 'nothing'}.`);
@@ -209,6 +213,11 @@ export const levelOrder: AlgorithmDef = {
       text: 'Every node in the tree appears in the output, exactly once.',
       check: 'complete === 1',
       why: 'The invariant is about order: nothing emitted is deeper than anything still waiting. A traversal that never discovers right children keeps that promise perfectly while returning a fraction of the tree. Order and completeness are separate claims and both are needed.',
+    },
+    cost: {
+      text: 'Every node is queued once and taken off once — the queue never holds the same node twice.',
+      check: 'dequeued === n',
+      why: 'A breadth-first walk over a tree needs no seen-set, and the reason is structural: a tree has exactly one route to each node, so nothing can arrive twice. Move to a graph and that stops being true, which is why the graph traversals on this site all carry a visited check and this one does not. The count is where that difference is visible.',
     },
   },
   run,

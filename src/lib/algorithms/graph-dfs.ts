@@ -87,13 +87,18 @@ const run: RunFn = (input, t, mut) => {
     t.derive({ once: once ? 1 : 0 });
   };
 
+  /** Nodes recorded. However many edges lead in, a node is recorded once. */
+  let recorded = 0;
+
   const walk = (u: string, depth: number) => {
     t.enter('dfs', `dfs(${u})`);
     if (!noMark) seen.add(u);
+
     state[u] = CELL_STATE.frontier;
     cursor = u;
     t.step(2, { u, v: null, depth, visited: out.length }, noMark ? `Reached ${u}, but it is never marked as seen.` : `Mark ${u} as seen, so nothing comes back to it.`, ev.visit('g', u));
 
+    recorded++;
     out.push(u);
     overlay[u] = out.length;
     recheck();
@@ -135,6 +140,7 @@ const run: RunFn = (input, t, mut) => {
   // is computed here by a plain flood fill rather than by the walk being judged.
   const reachable = floodFrom(adj, src);
   t.derive({
+    recorded,
     reachedAll:
       out.length === reachable.size && out.every((v) => reachable.has(String(v))) ? 1 : 0,
   });
@@ -196,6 +202,11 @@ export const graphDfs: AlgorithmDef = {
       text: 'Every node reachable from the source appears in the output, exactly once.',
       check: 'reachedAll === 1',
       why: 'The invariant says nothing is recorded twice, which is trivially satisfied by a walk that records almost nothing. Reaching everything and reaching nothing twice are opposite failure modes, and a traversal has to promise both.',
+    },
+    cost: {
+      text: 'A node is recorded at most once, however many edges lead to it.',
+      check: 'recorded <= n',
+      why: 'The seen set is usually introduced as an optimisation, and on a graph it is nothing of the kind: without it a cycle sends the walk round forever. Between those two extremes sits the case that is easy to miss — a graph with no cycle, where dropping the check merely repeats work and returns the right answer. This is the claim that notices the middle case.',
     },
   },
   run,

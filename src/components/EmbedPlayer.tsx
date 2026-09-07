@@ -175,7 +175,7 @@ export function EmbedPlayer({ slug, params }: { slug: string; params: Record<str
         )}
       </div>
 
-      <Narration step={current} />
+      <Narration step={current} total={total} />
 
       {/* ------------------------------ transport ----------------------------- */}
       <div className="border-t border-hairline px-3 py-2.5">

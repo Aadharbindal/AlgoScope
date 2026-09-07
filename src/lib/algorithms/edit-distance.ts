@@ -142,6 +142,15 @@ const run: RunFn = (input, t, mut) => {
   const zeroTopRow = mut.has('zero-top-row');
 
   t.enter('editDistance', `editDistance("${a}", "${b}")`);
+  /**
+   * Subproblems actually solved: the n × m interior cells.
+   *
+   * The base row and column are initialisation rather than computation — and
+   * they overlap at dp[0][0], which both loops write, so counting them would
+   * make "each cell once" false by exactly one cell and for no reason worth
+   * teaching.
+   */
+  let solved = 0;
   t.step(2, { i: null, j: null, n, m }, `Turning "${a}" (${n} letters) into "${b}" (${m} letters), one edit at a time.`);
   t.step(3, { i: null, j: null, n, m }, `dp[i][j] will hold the cost of turning the first i letters of "${a}" into the first j letters of "${b}".`);
 
@@ -181,6 +190,7 @@ const run: RunFn = (input, t, mut) => {
       if (same) {
         from = [{ r: i - 1, c: j - 1 }];
         const value = dp[i - 1][j - 1] as number;
+        solved++;
         dp[i][j] = value;
         verify();
         t.step(11, { i, j, n, m, cost: value }, `Nothing to do for this letter, so the cost is whatever it took to align the prefixes before them: ${value}.`, ev.write('dp', i * (m + 1) + j, value));
@@ -194,6 +204,7 @@ const run: RunFn = (input, t, mut) => {
 
         const best = noSubstitute ? Math.min(up, left) : Math.min(diag, up, left);
         const value = 1 + best;
+        solved++;
         dp[i][j] = value;
         verify();
 
@@ -209,10 +220,72 @@ const run: RunFn = (input, t, mut) => {
   cursor = { r: n, c: m };
   from = [];
   const answer = dp[n][m] as number;
+  // `n` in a lens means the size of the thing on stage, which for a table is
+  // its area — so the number of subproblems is published rather than spelled
+  // out in the claim, where it would silently mean something else.
+  t.derive({ explains: tableExplainsItself(dp, a, b) ? 1 : 0, solved, subproblems: n * m });
   t.exit();
   t.step(18, { i: n, j: m, n, m, cost: answer }, `The bottom-right cell is the whole problem: "${a}" becomes "${b}" in ${answer} edit${answer === 1 ? '' : 's'}.`, ev.found('dp', n * (m + 1) + m));
   return answer;
 };
+
+/**
+ * Walk the finished table backwards and see whether it explains its own answer.
+ *
+ * From the bottom-right cell, take whichever move the table says was cheapest —
+ * a free diagonal where the letters match, or one of the three at a cost of one
+ * — and count the edits spent. A table that is right about its own cells
+ * arrives at the origin having spent exactly the number it reported.
+ *
+ * No oracle: the words and the table are all this needs. That is the point of
+ * a postcondition — it states what the answer *means*, and a table whose cells
+ * do not add up to the number in the corner cannot satisfy it however plausible
+ * that number looks.
+ */
+function tableExplainsItself(dp: (number | null)[][], a: string, b: string): boolean {
+  let i = a.length;
+  let j = b.length;
+  let spent = 0;
+  const answer = dp[i]?.[j];
+  if (typeof answer !== 'number') return false;
+
+  // A walk that moves at least one step towards the origin each time cannot
+  // take more than n + m steps; the bound is here so a malformed table stops
+  // rather than spins.
+  for (let guard = a.length + b.length + 1; guard >= 0; guard--) {
+    if (i === 0 && j === 0) return spent === answer;
+
+    const here = dp[i][j];
+    const diag = i > 0 && j > 0 ? dp[i - 1][j - 1] : null;
+    const up = i > 0 ? dp[i - 1][j] : null;
+    const left = j > 0 ? dp[i][j - 1] : null;
+
+    if (diag !== null && a[i - 1] === b[j - 1] && here === diag) {
+      i--;
+      j--;
+      continue;
+    }
+    if (diag !== null && here === diag + 1) {
+      i--;
+      j--;
+      spent++;
+      continue;
+    }
+    if (up !== null && here === up + 1) {
+      i--;
+      spent++;
+      continue;
+    }
+    if (left !== null && here === left + 1) {
+      j--;
+      spent++;
+      continue;
+    }
+    // No move accounts for this cell, so the table does not explain itself.
+    return false;
+  }
+  return false;
+}
 
 /** Two strings of length n that disagree often, for growth measurement. */
 function pair(n: number): { word1: string; word2: string } {
@@ -245,6 +318,16 @@ export const editDistance: AlgorithmDef = {
       check: 'exact === 1',
       when: 'defined(exact)',
       why: 'This is what makes a dynamic program work, and it is stronger than "the answer came out right". Each cell is built from three that were filled earlier, so one wrong cell is inherited by everything below and to the right of it — a table can therefore be wrong in a way that only shows up in the last cell, hundreds of steps after the mistake. Checking every cell as it is written turns that into an error at the step that caused it.',
+    },
+    postcondition: {
+      text: 'The table explains its own answer: walking the cheapest moves back to the origin spends exactly the number in the corner.',
+      check: 'explains === 1',
+      why: 'The invariant above leans on knowing the true cost of every prefix pair, which is a thing the checker computes separately. This leans on nothing but the two words and the table itself — take whichever move each cell says was cheapest, walk to the origin, and count. A table that has quietly stopped charging for insertions still produces a number, and that number is still in the corner, and the walk still gets there — spending less than the corner claims. Which is the moment the answer stops meaning anything.',
+    },
+    cost: {
+      text: 'Each of the n × m subproblems is solved exactly once, and afterwards only read.',
+      check: 'solved === subproblems',
+      why: 'This is what makes it dynamic programming rather than plain recursion. The recursive definition recomputes the same pair of prefixes an exponential number of times; the table exists precisely so that each is computed once. Nothing about the number in the corner records whether that happened — a version that recomputed a cell returns the same distance, and has given up the only reason the table is there.',
     },
   },
   run,

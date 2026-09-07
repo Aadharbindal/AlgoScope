@@ -240,6 +240,11 @@ export const reverseLinkedList: AlgorithmDef = {
       check: 'reversedOk === 1',
       why: 'The invariant counts nodes, which a version that returns the wrong end of the list satisfies perfectly — every node is still accounted for, at every step. What is wrong is which node was handed back, and that is a fact about the result rather than about the loop.',
     },
+    cost: {
+      text: 'Every node is visited exactly once — the walk neither skips a node nor goes round twice.',
+      check: 'ops_iterations === n',
+      why: 'A reversal that loses the rest of the list ends early; one that rewires into a cycle would never end at all. Both are the same mistake seen from different sides, and the node count is where either shows immediately — before the returned list is even inspected.',
+    },
   },
   run,
   defaultInput: { array: [10, 20, 30, 40] },

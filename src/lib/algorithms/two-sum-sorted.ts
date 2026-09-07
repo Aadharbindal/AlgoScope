@@ -212,6 +212,11 @@ export const twoSumSorted: AlgorithmDef = {
       check: 'pairOk === 1',
       why: 'A pair of indices is only an answer if it is a pair: two distinct positions whose values add up. Stating it this way catches the whole family of near-misses at once — an index paired with itself, a partner computed with the wrong sign, a lookup keyed by the wrong thing — none of which any loop invariant about the search notices, because each of them searches perfectly well for the wrong thing.',
     },
+    cost: {
+      text: 'Each index is looked at once: the two pointers only ever move towards each other, so the loop runs fewer times than the array is long.',
+      check: 'ops_iterations <= n',
+      why: 'This is the whole reason the sorted version beats the nested one, and it is invisible in the answer — a version that restarted a pointer, or moved the wrong one, still finds the pair on most inputs and still returns the right indices. What it loses is the linear bound, and the count is the only place that shows.',
+    },
   },
   run,
   defaultInput: { array: [2, 4, 7, 11, 15, 20], target: 18 },

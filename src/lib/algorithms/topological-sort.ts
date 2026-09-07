@@ -156,6 +156,8 @@ const run: RunFn = (input, t, mut) => {
     t.step(10, { n: nodes.length, u: n.id, v: null, queued: queue.length, done: 0 }, `Queue ${n.id}.`, ev.push('queue', n.id));
   }
 
+  /** Edges followed. Each dependency is discharged exactly once. */
+  let relaxed = 0;
   let guard = 0;
   while (queue.length > 0 && guard++ < 100_000) {
     t.step(12, { n: nodes.length, u: null, v: null, queued: queue.length, done: out.length }, `${queue.length} node${queue.length === 1 ? '' : 's'} ready.`, ev.cmp({ kind: 'var', name: 'queued' }, '>', { kind: 'literal', value: 0 }, true));
@@ -171,6 +173,7 @@ const run: RunFn = (input, t, mut) => {
     t.step(15, { n: nodes.length, u, v: null, queued: queue.length, done: out.length }, `${u} goes into the order. Everything it depends on is already there.`);
 
     for (const { to: v } of adj.get(u) ?? []) {
+      relaxed++;
       if (!noDecrement) indeg.set(v, (indeg.get(v) ?? 0) - 1);
       overlay[v] = indeg.get(v) ?? 0;
       t.step(18, { n: nodes.length, u, v, queued: queue.length, done: out.length, indeg: indeg.get(v) ?? 0 }, noDecrement ? `${v} is not credited for ${u} being done — it still shows ${indeg.get(v)}.` : `${v} was waiting on ${u}. It is now waiting on ${indeg.get(v)}.`, ev.write('g', 0, indeg.get(v) ?? 0));
@@ -196,7 +199,12 @@ const run: RunFn = (input, t, mut) => {
   // otherwise, so the claim has to tie the shortfall to a cycle that is really
   // there — found here by a separate walk rather than inferred from having run
   // out of work.
-  t.derive({ accounted: complete || reallyCyclic(nodes, edges) ? 1 : 0 });
+  // Edges *out of the nodes that were emitted*, not every edge in the graph:
+  // on a cyclic graph the nodes inside the cycle never come off the queue, so
+  // their edges are never followed and never should be.
+  const emitted = new Set(out.map(String));
+  const owed = edges.filter((e) => emitted.has(e.from)).length;
+  t.derive({ accounted: complete || reallyCyclic(nodes, edges) ? 1 : 0, relaxed, owed });
   const answer = complete ? out.join(',') : `cycle: only ${out.length} of ${nodes.length} could be ordered`;
   t.step(25, { n: nodes.length, u: null, v: null, queued: 0, done: out.length }, complete ? `A valid order: ${answer}.` : answer);
   return answer;
@@ -258,6 +266,11 @@ export const topologicalSort: AlgorithmDef = {
       text: 'Either every node is in the order, or the graph really does contain a cycle.',
       check: 'accounted === 1',
       why: 'The invariant judges the prefix that has been emitted, and is satisfied by a run that stops after three nodes of eight. Reporting a cycle is the right answer when there is one and a wrong answer when there is not — so the claim has to tie the shortfall to an actual cycle rather than merely to having run out of work.',
+    },
+    cost: {
+      text: 'Every edge out of an emitted node is followed exactly once: a dependency is discharged when its source is ordered, and never revisited.',
+      check: 'relaxed === owed',
+      why: 'Kahn’s algorithm looks like more bookkeeping than a plain traversal, and the counts are where that bookkeeping pays: each edge is decremented once, so the whole sort costs one pass over the graph rather than a re-scan for ready nodes. A version that rescanned would produce a valid order and would be quadratic, and the order it produced would not say so.',
     },
   },
   run,
