@@ -302,6 +302,11 @@ export const cycleDetection: AlgorithmDef = {
     fnName: 'hasCycle',
     compareBy: 'return',
     binds: 'list',
+    // C has no bool, so its natural spelling of the answer is 1 and 0. That is
+    // the same answer in a different alphabet, and the displayed C listing on
+    // this page returns it — a reader who copies what is on screen should not
+    // be told they are wrong about the language they are writing in.
+    normalise: (returned) => (returned === '1' ? 'true' : returned === '0' ? 'false' : returned),
     starters: {
       cpp: `struct Node {
     int val;

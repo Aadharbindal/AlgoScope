@@ -3,6 +3,7 @@
 import { ResolvedView } from '@/lib/trace/lens';
 import { Frame, SeqStruct, Step, Struct } from '@/lib/trace/types';
 import { ArrayView, RegionLegend } from './ArrayView';
+import { TextView } from './TextView';
 import { GraphLegend, GraphView } from './GraphView';
 import { GridLegend, GridView } from './GridView';
 import { ListView } from './ListView';
@@ -107,6 +108,16 @@ function One({
           step={step}
         />
       );
+    case 'text':
+      return (
+        <TextView
+          struct={struct}
+          previous={previous?.kind === 'text' ? previous : undefined}
+          pointers={view.pointers}
+          regions={view.regions}
+          step={step}
+        />
+      );
     case 'list':
       return (
         <ListView struct={struct} previous={previous?.kind === 'list' ? previous : undefined} />
@@ -143,6 +154,7 @@ function One({
 function Legend({ struct, view }: { struct: Struct; view: ResolvedView }) {
   switch (struct.kind) {
     case 'array':
+    case 'text':
       return <RegionLegend regions={view.regions} />;
     case 'tree':
       return <TreeLegend struct={struct} />;

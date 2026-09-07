@@ -121,6 +121,11 @@ export class Tracer {
     this.bind(id, () => ({ kind: 'array', id, values: ref.slice(), label }));
   }
 
+  /** A word on the stage, one cell per character. */
+  text(id: string, ref: () => string, label?: string) {
+    this.bind(id, () => ({ kind: 'text' as const, id, chars: [...ref()], label }));
+  }
+
   seq(
     id: string,
     ref: Scalar[],

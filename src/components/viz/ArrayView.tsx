@@ -13,7 +13,7 @@ interface Props {
   step: number;
 }
 
-const REGION_CELL: Record<RegionKind, string> = {
+export const REGION_CELL: Record<RegionKind, string> = {
   eliminated: 'bg-sunk border-hairline text-eliminated-ink line-through decoration-1',
   active: 'bg-raised border-hairline-strong text-ink',
   sorted: 'bg-accent-dim border-accent-edge text-ink',
@@ -21,7 +21,7 @@ const REGION_CELL: Record<RegionKind, string> = {
   found: 'bg-accent border-accent text-on-accent',
 };
 
-const ROLE_COLOR: Record<ResolvedPointer['role'], string> = {
+export const ROLE_COLOR: Record<ResolvedPointer['role'], string> = {
   'window-start': 'text-accent border-accent-edge bg-accent-dim',
   'window-end': 'text-accent border-accent-edge bg-accent-dim',
   probe: 'text-probe border-probe-edge bg-probe-dim',
@@ -31,7 +31,7 @@ const ROLE_COLOR: Record<ResolvedPointer['role'], string> = {
   aux: 'text-muted border-hairline-strong bg-raised',
 };
 
-const ARROW_COLOR: Record<ResolvedPointer['role'], string> = {
+export const ARROW_COLOR: Record<ResolvedPointer['role'], string> = {
   'window-start': 'var(--accent)',
   'window-end': 'var(--accent)',
   probe: 'var(--probe)',
@@ -62,9 +62,9 @@ function touched(event?: TraceEvent): number[] {
 }
 
 /** Centre of cell i, in the grid's own units. */
-const centreOf = (i: number) => `calc((var(--cell) + var(--gap)) * ${i} + var(--cell) / 2)`;
+export const centreOf = (i: number) => `calc((var(--cell) + var(--gap)) * ${i} + var(--cell) / 2)`;
 
-const POINTER_ROW = 21;
+export const POINTER_ROW = 21;
 
 export function ArrayView({ struct, previous, pointers, regions, event, step }: Props) {
   const values = struct.values;

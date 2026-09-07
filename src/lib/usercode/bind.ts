@@ -181,6 +181,11 @@ const WORD_SLOTS: Slot[] = [
   { names: /^(m|len2)$/i, as: 'm', is: 'the length of b', value: (i) => wordOf(i, 'word2').length },
 ];
 
+const ONE_WORD_SLOTS: Slot[] = [
+  { names: /^(s|word|str|text|a)$/i, as: 's', is: 'the word', value: (i) => wordOf(i, 'word') },
+  { names: /^(n|len|length|size)$/i, as: 'n', is: 'its length', value: (i) => wordOf(i, 'word').length },
+];
+
 const TABLE: Record<LaneBinding, Slot[]> = {
   array: ARRAY_SLOTS,
   list: LIST_SLOTS,
@@ -188,6 +193,7 @@ const TABLE: Record<LaneBinding, Slot[]> = {
   grid: GRID_SLOTS,
   graph: GRAPH_SLOTS,
   weighted: WEIGHTED_SLOTS,
+  word: ONE_WORD_SLOTS,
   words: WORD_SLOTS,
 };
 

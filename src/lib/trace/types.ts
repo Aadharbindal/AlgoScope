@@ -222,6 +222,23 @@ export interface GraphStruct {
   label?: string;
 }
 
+/**
+ * A string, drawn as the characters it is made of.
+ *
+ * An array of numbers and a word are the same shape on screen — a row of
+ * cells with pointers under them — and the difference is only what a cell
+ * holds. It is a kind of its own rather than a widened `ArrayStruct` because
+ * the array views, the growth measurement and the link encoder all work in
+ * numbers, and letting one of them meet a letter would be a bug looking for
+ * somewhere to happen.
+ */
+export interface TextStruct {
+  kind: 'text';
+  id: string;
+  chars: string[];
+  label?: string;
+}
+
 export interface SeqStruct {
   kind: 'seq';
   id: string;
@@ -233,6 +250,7 @@ export interface SeqStruct {
 export type Struct =
   | ArrayStruct
   | ListStruct
+  | TextStruct
   | TreeStruct
   | GridStruct
   | TableStruct

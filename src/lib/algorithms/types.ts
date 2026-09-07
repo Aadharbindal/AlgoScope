@@ -2,7 +2,14 @@ import { COUNT_CAP, PROBE_CAP, StepCapExceeded, Tracer } from '../trace/tracer';
 import { annotateInvariant } from '../trace/lens';
 import { Lens, Scalar, Trace } from '../trace/types';
 
-export type Category = 'searching' | 'sorting' | 'linked-list' | 'trees' | 'graphs' | 'dp';
+export type Category =
+  | 'searching'
+  | 'sorting'
+  | 'strings'
+  | 'linked-list'
+  | 'trees'
+  | 'graphs'
+  | 'dp';
 
 /**
  * Displayed source language. Every language for a given algorithm is a strict
@@ -167,7 +174,15 @@ export interface UserLane {
 }
 
 /** The shape a lane's parameters are filled from. */
-export type LaneBinding = 'array' | 'list' | 'tree' | 'grid' | 'graph' | 'weighted' | 'words';
+export type LaneBinding =
+  | 'array'
+  | 'list'
+  | 'tree'
+  | 'grid'
+  | 'graph'
+  | 'weighted'
+  | 'word'
+  | 'words';
 
 /** The languages a reader can actually write in. */
 export type UserLang = Lang | 'js';

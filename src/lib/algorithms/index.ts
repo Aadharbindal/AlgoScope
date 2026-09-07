@@ -13,6 +13,7 @@ import { insertionSort } from './insertion-sort';
 import { kadane } from './kadane';
 import { levelOrder } from './level-order';
 import { linearSearch } from './linear-search';
+import { palindrome } from './palindrome';
 import { quickSort } from './quick-sort';
 import { selectionSort } from './selection-sort';
 import { twoSumHash } from './two-sum-hash';
@@ -38,6 +39,7 @@ export const ALGORITHMS: AlgorithmDef[] = [
   mergeSort,
   quickSort,
   heapSort,
+  palindrome,
   reverseLinkedList,
   reverseLinkedListRecursive,
   cycleDetection,
@@ -61,6 +63,7 @@ export const bySlug = (slug: string): AlgorithmDef | undefined =>
 export const CATEGORY_LABEL: Record<Category, string> = {
   searching: 'Searching',
   sorting: 'Sorting',
+  strings: 'Strings',
   'linked-list': 'Linked lists',
   trees: 'Trees',
   graphs: 'Graphs',
@@ -70,6 +73,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
 export const CATEGORY_ORDER: Category[] = [
   'searching',
   'sorting',
+  'strings',
   'linked-list',
   'trees',
   'graphs',
