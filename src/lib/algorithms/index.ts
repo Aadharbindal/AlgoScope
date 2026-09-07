@@ -1,6 +1,7 @@
 import { binarySearch } from './binary-search';
 import { cycleDetection } from './cycle-detection';
 import { dijkstra } from './dijkstra';
+import { subsets } from './subsets';
 import { editDistance } from './edit-distance';
 import { graphBfs } from './graph-bfs';
 import { graphDfs } from './graph-dfs';
@@ -61,6 +62,7 @@ export const ALGORITHMS: AlgorithmDef[] = [
   dijkstra,
   unionFind,
   editDistance,
+  subsets,
 ];
 
 export const bySlug = (slug: string): AlgorithmDef | undefined =>
