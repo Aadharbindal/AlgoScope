@@ -21,6 +21,7 @@ import { maxSubarrayPrefix } from './max-subarray-prefix';
 import { mergeSort } from './merge-sort';
 import { nextGreaterElement } from './next-greater-element';
 import { reverseLinkedList } from './reverse-linked-list';
+import { reverseLinkedListRecursive } from './reverse-linked-list-recursive';
 import { AlgorithmDef, Category } from './types';
 
 export const ALGORITHMS: AlgorithmDef[] = [
@@ -35,6 +36,7 @@ export const ALGORITHMS: AlgorithmDef[] = [
   mergeSort,
   quickSort,
   reverseLinkedList,
+  reverseLinkedListRecursive,
   cycleDetection,
   maxSubarrayBrute,
   maxSubarrayPrefix,

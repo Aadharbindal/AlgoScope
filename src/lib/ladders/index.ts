@@ -46,6 +46,29 @@ export interface LadderDef {
 
 export const LADDERS: LadderDef[] = [
   {
+    slug: 'reverse-a-list',
+    name: 'Reversing a Linked List',
+    problem:
+      'Given the head of a singly linked list, turn every arrow around and return the head of the result. The nodes stay where they are — only the links change.',
+    why: 'The two rungs do identical work and return identical lists, and one of them cannot be used on a long input. That is the whole lesson, and it is a lesson about space rather than time: the iterative version holds three pointers whatever the length, and the recursive one holds a stack frame per node. Compare the measured space on the two pages and the difference is the entire argument for why the iterative form is the one people are asked to write.',
+    rungs: [
+      {
+        slug: 'reverse-linked-list-recursive',
+        label: 'Recursive',
+        idea: 'Walk to the end, then fix one link per frame on the way back out.',
+        tradeoff: 'A stack frame per node, so a list of a million nodes is a stack overflow rather than an answer.',
+      },
+      {
+        slug: 'reverse-linked-list',
+        label: 'Iterative, three pointers',
+        idea: 'Carry the references yourself instead of letting the call stack carry them.',
+        tradeoff: 'Nothing, other than having to see that three pointers are needed and why the third one is not optional.',
+      },
+    ],
+    compareInput: { array: [10, 20, 30, 40, 50, 60] },
+    growthSizes: [8, 16, 32, 64, 128, 256],
+  },
+  {
     slug: 'maximum-subarray',
     name: 'Maximum Subarray',
     problem:

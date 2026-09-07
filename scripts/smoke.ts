@@ -322,26 +322,53 @@ for (const ladder of LADDERS) {
   const measured = rungs.map(({ def }) => {
     const points = ladder.growthSizes.map((n) => ({ n, ops: countOps(def, def.makeInput(n)) }));
     const best = analyseGrowth(points, def.projectTo).best.model;
+    // Space is measured the same way time is, because climbing a ladder does
+    // not always mean going faster. Reversing a list recursively and
+    // iteratively are the same work in the same order; the difference is a
+    // stack frame per node, and a ladder that could only be justified on time
+    // would have no way to say so.
+    const spacePoints = ladder.growthSizes.map((n) => ({ n, ops: countSpace(def, def.makeInput(n)) }));
+    const spaceBest = analyseGrowth(spacePoints, def.projectTo).best.model;
     return {
       label: def.name,
       ops: points[points.length - 1].ops,
       notation: best.notation,
       rank: MODELS.findIndex((m) => m.key === best.key),
+      spaceNotation: spaceBest.notation,
+      spaceRank: MODELS.findIndex((m) => m.key === spaceBest.key),
     };
   });
   const biggest = ladder.growthSizes[ladder.growthSizes.length - 1];
   for (const m of measured) {
     console.log(`  - ${m.label}: ${m.notation}, ${m.ops.toLocaleString()} ops at n=${biggest}`);
   }
+  for (const m of measured) {
+    console.log(`    space ${m.spaceNotation}`);
+  }
+  // Going up may never cost more, in either dimension.
   for (let i = 1; i < measured.length; i++) {
     ok(
       measured[i].rank <= measured[i - 1].rank,
-      `rung ${i + 1} is in no worse a complexity class than rung ${i} (${measured[i].notation} vs ${measured[i - 1].notation})`,
+      `rung ${i + 1} is in no worse a time class than rung ${i} (${measured[i].notation} vs ${measured[i - 1].notation})`,
     );
+    // Space is reported rather than asserted, because buying time with space
+    // is a real trade and the sorting ladder makes it: merge sort is a class
+    // faster than insertion sort and a class hungrier. Failing on that would
+    // be the suite refusing to believe the most famous trade in the subject.
+    if (measured[i].spaceRank > measured[i - 1].spaceRank) {
+      console.log(
+        `    note: rung ${i + 1} buys its time with space (${measured[i].spaceNotation} vs ${measured[i - 1].spaceNotation})`,
+      );
+    }
   }
+  // …and the climb has to be worth making in at least one of them. A ladder
+  // whose top rung is no better than its bottom one anywhere is a list of
+  // implementations, not a ladder.
+  const top = measured[measured.length - 1];
+  const bottom = measured[0];
   ok(
-    measured[measured.length - 1].rank < measured[0].rank,
-    `the top rung is in a better class than the bottom (${measured[measured.length - 1].notation} vs ${measured[0].notation})`,
+    top.rank < bottom.rank || top.spaceRank < bottom.spaceRank,
+    `the top rung beats the bottom in time or in space (time ${top.notation} vs ${bottom.notation}, space ${top.spaceNotation} vs ${bottom.spaceNotation})`,
   );
 }
 

@@ -46,12 +46,12 @@ const JAVA = `Node reverse(Node head) {
     return prev;
 }`;
 
-interface World {
+export interface World {
   nodes: Map<string, ListNode>;
   total: number;
 }
 
-function build(values: number[]): World {
+export function build(values: number[]): World {
   const nodes = new Map<string, ListNode>();
   values.forEach((v, k) => {
     nodes.set(`n${k}`, { id: `n${k}`, value: v, next: k < values.length - 1 ? `n${k + 1}` : null });
@@ -60,7 +60,7 @@ function build(values: number[]): World {
 }
 
 /** Walk a chain, refusing to loop forever if a bug has created a cycle. */
-function chainLength(w: World, start: string | null): number {
+export function chainLength(w: World, start: string | null): number {
   let len = 0;
   let at = start;
   const seen = new Set<string>();
@@ -103,7 +103,7 @@ function markCounts(
  * Bounded, because the very bug being looked for can leave a list pointing at
  * itself — a postcondition that hangs on a broken input is not a check.
  */
-function chainFrom(w: World, id: string | null): string {
+export function chainFrom(w: World, id: string | null): string {
   const out: number[] = [];
   const seen = new Set<string>();
   let at = id;
@@ -117,7 +117,7 @@ function chainFrom(w: World, id: string | null): string {
   return out.join(',');
 }
 
-const label = (w: World, id: string | null) => (id === null ? 'nullptr' : String(w.nodes.get(id)?.value));
+export const label = (w: World, id: string | null) => (id === null ? 'nullptr' : String(w.nodes.get(id)?.value));
 
 interface Opts {
   /** The buggy version reads curr->next after it has already been overwritten. */
