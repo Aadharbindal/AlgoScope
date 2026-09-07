@@ -125,7 +125,7 @@ export const LADDERS: LadderDef[] = [
     slug: 'sorting',
     name: 'Sorting an Array',
     problem: 'Given an array, rearrange it so every element is less than or equal to the one after it.',
-    why: 'Five rungs, and the first three are all quadratic — which is the useful surprise. Bubble, selection and insertion sort differ in how they move data and in what they cost on already-sorted input, but none of them escapes the n² barrier, because all three compare elements that are far apart only by walking past everything between them. Merge and quick sort break out by dividing the array first, and the jump in the chart is where the whole subject of algorithm design starts. Watch insertion sort on nearly-sorted input before dismissing the quadratic rungs, though: on that shape it beats both of the fast ones.',
+    why: 'Six rungs, and the first three are all quadratic — which is the useful surprise. Bubble, selection and insertion sort differ in how they move data and in what they cost on already-sorted input, but none of them escapes the n² barrier, because all three compare elements that are far apart only by walking past everything between them. Merge and quick sort break out by dividing the array first, and the jump in the chart is where the whole subject of algorithm design starts. Watch insertion sort on nearly-sorted input before dismissing the quadratic rungs, though: on that shape it beats both of the fast ones. And note where the last rung comes from — heap sort is the first rung with a better way of asking its question, not a better plan.',
     rungs: [
       {
         slug: 'bubble-sort',
@@ -156,6 +156,12 @@ export const LADDERS: LadderDef[] = [
         label: 'Quick sort',
         idea: 'Partition around a pivot, then sort the two sides independently.',
         tradeoff: 'Sorts in place and is usually the fastest here, but a bad pivot makes it quadratic — the guarantee merge sort gives, it does not.',
+      },
+      {
+        slug: 'heap-sort',
+        label: 'Heap sort',
+        idea: 'Keep selection sort exactly as it was, and make finding the largest value cost log n instead of n.',
+        tradeoff: 'Never quadratic and never allocates, which neither of the two above manages at once — and usually the slowest of the three in practice, because it jumps around memory instead of walking through it.',
       },
     ],
     compareInput: { array: [38, 27, 43, 3, 9, 82, 10, 55, 1, 74, 20, 66] },

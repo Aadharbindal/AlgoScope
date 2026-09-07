@@ -8,6 +8,7 @@ import { topologicalSort } from './topological-sort';
 import { gridBfs } from './grid-bfs';
 import { inorderIterative } from './inorder-iterative';
 import { inorderTraversal } from './inorder-traversal';
+import { heapSort } from './heap-sort';
 import { insertionSort } from './insertion-sort';
 import { kadane } from './kadane';
 import { levelOrder } from './level-order';
@@ -36,6 +37,7 @@ export const ALGORITHMS: AlgorithmDef[] = [
   insertionSort,
   mergeSort,
   quickSort,
+  heapSort,
   reverseLinkedList,
   reverseLinkedListRecursive,
   cycleDetection,
