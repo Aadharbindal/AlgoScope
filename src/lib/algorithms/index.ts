@@ -4,6 +4,7 @@ import { dijkstra } from './dijkstra';
 import { editDistance } from './edit-distance';
 import { graphBfs } from './graph-bfs';
 import { graphDfs } from './graph-dfs';
+import { unionFind } from './union-find';
 import { topologicalSort } from './topological-sort';
 import { gridBfs } from './grid-bfs';
 import { inorderIterative } from './inorder-iterative';
@@ -56,6 +57,7 @@ export const ALGORITHMS: AlgorithmDef[] = [
   graphDfs,
   topologicalSort,
   dijkstra,
+  unionFind,
   editDistance,
 ];
 
