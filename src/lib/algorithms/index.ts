@@ -7,6 +7,7 @@ import { graphDfs } from './graph-dfs';
 import { unionFind } from './union-find';
 import { topologicalSort } from './topological-sort';
 import { gridBfs } from './grid-bfs';
+import { bstSearch } from './bst-search';
 import { inorderIterative } from './inorder-iterative';
 import { inorderTraversal } from './inorder-traversal';
 import { heapSort } from './heap-sort';
@@ -49,6 +50,7 @@ export const ALGORITHMS: AlgorithmDef[] = [
   maxSubarrayBrute,
   maxSubarrayPrefix,
   kadane,
+  bstSearch,
   inorderTraversal,
   inorderIterative,
   levelOrder,
