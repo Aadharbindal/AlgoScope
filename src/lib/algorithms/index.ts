@@ -13,6 +13,7 @@ import { insertionSort } from './insertion-sort';
 import { kadane } from './kadane';
 import { levelOrder } from './level-order';
 import { linearSearch } from './linear-search';
+import { longestUnique } from './longest-unique';
 import { palindrome } from './palindrome';
 import { quickSort } from './quick-sort';
 import { selectionSort } from './selection-sort';
@@ -40,6 +41,7 @@ export const ALGORITHMS: AlgorithmDef[] = [
   quickSort,
   heapSort,
   palindrome,
+  longestUnique,
   reverseLinkedList,
   reverseLinkedListRecursive,
   cycleDetection,
